@@ -1,0 +1,123 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String        @id @default(uuid())
+  email                String        @unique
+  password             String        // bcrypt hashed
+  firstName            String
+  lastName             String
+  role                 Role          @default(MARKETING_MANAGER)
+  status               UserStatus    @default(ACTIVE)
+  avatar               String?
+  lastLogin            DateTime?
+  failedLoginAttempts  Int           @default(0)
+  lockedUntil          DateTime?
+  passwordResetToken   String?       @unique
+  passwordResetExpires DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  // Relations
+  blogs                Blog[]        @relation("BlogAuthor")
+  newsletters          Newsletter[]  @relation("NewsletterAuthor")
+  approvedBlogs        Blog[]        @relation("BlogApprover")
+  approvedNewsletters  Newsletter[]  @relation("NewsletterApprover")
+  activityLogs         ActivityLog[]
+
+  @@index([email])
+  @@index([status])
+}
+
+enum Role {
+  ADMIN
+  MARKETING_MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Blog {
+  id           String        @id @default(uuid())
+  title        String
+  content      String        @db.Text
+  summary      String?       @db.Text
+  category     String?
+  tags         String[]
+  author       String?
+  image        String?
+  status       ContentStatus @default(PENDING)
+  
+  createdBy    User          @relation("BlogAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById  String
+  
+  approvedBy   User?         @relation("BlogApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  publishedAt  DateTime?
+  
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdById])
+  @@index([approvedById])
+}
+
+model Newsletter {
+  id           String        @id @default(uuid())
+  title        String
+  content      String        @db.Text
+  summary      String?       @db.Text
+  category     String?
+  tags         String[]
+  image        String?
+  status       ContentStatus @default(PENDING)
+  
+  createdBy    User          @relation("NewsletterAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById  String
+  
+  approvedBy   User?         @relation("NewsletterApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  publishedAt  DateTime?
+  
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdById])
+  @@index([approvedById])
+}
+
+enum ContentStatus {
+  PENDING   // Awaiting admin approval
+  APPROVED  // Approved and published
+  REJECTED  // Rejected by admin
+  DISABLED  // Hidden/unpublished
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  action     String   // e.g., "CREATE_BLOG", "APPROVE_NEWSLETTER", "LOGIN"
+  entityType String?  // e.g., "Blog", "Newsletter", "User"
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@index([action])
+}
+
