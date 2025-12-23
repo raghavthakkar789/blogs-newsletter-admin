@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/authenticate';
@@ -25,10 +25,68 @@ const statusSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DISABLED'])
 });
 
+// Public GET: list approved blogs (SEO/public)
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string | undefined;
+    
+    const where: any = {
+      status: 'APPROVED'
+    };
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+        { summary: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
+    const [blogs, total] = await Promise.all([
+      prisma.blog.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.blog.count({ where })
+    ]);
+    
+    res.json({
+      blogs,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Public GET: single approved blog
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const blog = await prisma.blog.findFirst({
+      where: { id: req.params.id, status: 'APPROVED' }
+    });
+    
+    if (!blog) {
+      return res.status(404).json({ message: 'Blog not found' });
+    }
+    
+    res.json({ blog });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Authenticated routes for admin/marketing UI
 router.use(authenticate);
 
-// Get all blogs
-router.get('/', async (req: AuthRequest, res: Response) => {
+// Authenticated GET: full blogs listing with role-based access
+router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -112,8 +170,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get blog by ID
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+// Authenticated GET: single blog with access control
+router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
   try {
     const blog = await prisma.blog.findUnique({
       where: { id: req.params.id },
@@ -270,7 +328,8 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_BLOG_STATU
     
     const updateData: any = {
       status,
-      approvedById: status === 'APPROVED' ? req.user!.id : null
+      // keep original approver for DISABLED content so history is preserved
+      approvedById: status === 'APPROVED' ? req.user!.id : blog.approvedById
     };
     
     if (status === 'APPROVED' && !blog.publishedAt) {
@@ -300,6 +359,43 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_BLOG_STATU
     });
     
     res.json({ blog: updatedBlog });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.errors[0].message });
+    }
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Bulk update blog status (Admin only)
+router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_BLOG_STATUS', 'Blog'), async (req: AuthRequest, res: Response) => {
+  try {
+    const bodySchema = z.object({
+      ids: z.array(z.string().uuid()).min(1, 'At least one blog id is required'),
+      status: z.enum(['PENDING', 'APPROVED', 'REJECTED'])
+    });
+
+    const { ids, status } = bodySchema.parse(req.body);
+
+    const updateData: any = {
+      status,
+      approvedById: status === 'APPROVED' ? req.user!.id : null
+    };
+
+    if (status === 'APPROVED') {
+      updateData.publishedAt = new Date();
+    } else {
+      updateData.publishedAt = null;
+    }
+
+    const result = await prisma.blog.updateMany({
+      where: { id: { in: ids } },
+      data: updateData
+    });
+
+    res.json({
+      updatedCount: result.count
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: error.errors[0].message });

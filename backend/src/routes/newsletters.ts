@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/authenticate';
@@ -24,10 +24,68 @@ const statusSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DISABLED'])
 });
 
+// Public GET: list approved newsletters
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string | undefined;
+    
+    const where: any = {
+      status: 'APPROVED'
+    };
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+        { summary: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
+    const [newsletters, total] = await Promise.all([
+      prisma.newsletter.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.newsletter.count({ where })
+    ]);
+    
+    res.json({
+      newsletters,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Public GET: single approved newsletter
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const newsletter = await prisma.newsletter.findFirst({
+      where: { id: req.params.id, status: 'APPROVED' }
+    });
+    
+    if (!newsletter) {
+      return res.status(404).json({ message: 'Newsletter not found' });
+    }
+    
+    res.json({ newsletter });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Authenticated routes for admin/marketing UI
 router.use(authenticate);
 
-// Get all newsletters
-router.get('/', async (req: AuthRequest, res: Response) => {
+// Authenticated GET: full newsletters listing with role-based access
+router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -110,8 +168,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get newsletter by ID
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+// Authenticated GET: single newsletter with access control
+router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
   try {
     const newsletter = await prisma.newsletter.findUnique({
       where: { id: req.params.id },
@@ -268,7 +326,8 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER
     
     const updateData: any = {
       status,
-      approvedById: status === 'APPROVED' ? req.user!.id : null
+      // keep original approver for DISABLED content so history is preserved
+      approvedById: status === 'APPROVED' ? req.user!.id : newsletter.approvedById
     };
     
     if (status === 'APPROVED' && !newsletter.publishedAt) {
@@ -298,6 +357,43 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER
     });
     
     res.json({ newsletter: updatedNewsletter });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.errors[0].message });
+    }
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+});
+
+// Bulk update newsletter status (Admin only)
+router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_NEWSLETTER_STATUS', 'Newsletter'), async (req: AuthRequest, res: Response) => {
+  try {
+    const bodySchema = z.object({
+      ids: z.array(z.string().uuid()).min(1, 'At least one newsletter id is required'),
+      status: z.enum(['PENDING', 'APPROVED', 'REJECTED'])
+    });
+
+    const { ids, status } = bodySchema.parse(req.body);
+
+    const updateData: any = {
+      status,
+      approvedById: status === 'APPROVED' ? req.user!.id : null
+    };
+
+    if (status === 'APPROVED') {
+      updateData.publishedAt = new Date();
+    } else {
+      updateData.publishedAt = null;
+    }
+
+    const result = await prisma.newsletter.updateMany({
+      where: { id: { in: ids } },
+      data: updateData
+    });
+
+    res.json({
+      updatedCount: result.count
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: error.errors[0].message });

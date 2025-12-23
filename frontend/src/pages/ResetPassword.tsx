@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Lock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const resetPasswordSchema = z
@@ -32,14 +33,40 @@ export default function ResetPassword() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors }
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema)
   });
+
+  const password = watch('password', '');
+
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(0);
+      return;
+    }
+
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (/[A-Z]/.test(password)) strength += 25;
+    if (/[a-z]/.test(password)) strength += 25;
+    if (/[0-9]/.test(password)) strength += 12.5;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
+
+    setPasswordStrength(strength);
+  }, [password]);
+
+  const getStrengthColor = (strength: number) => {
+    if (strength < 50) return 'bg-red-500';
+    if (strength < 75) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
@@ -60,47 +87,69 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Reset Password</CardTitle>
-          <CardDescription>Enter your new password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-              />
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md p-8 shadow-xl">
+        <div className="text-center mb-8">
+          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+            <Lock className="h-6 w-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardDescription className="mt-2">Enter your new password</CardDescription>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="password">New Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              {...register('password')}
+              disabled={loading}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </Button>
+            {/* Password Strength Indicator */}
+            {password && (
+              <div className="mt-2">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${getStrengthColor(passwordStrength)}`}
+                    style={{ width: `${passwordStrength}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Password must contain: uppercase, lowercase, number, special character (min 8 chars)
+                </p>
+              </div>
+            )}
+          </div>
 
-            <Link to="/login" className="block text-center text-sm text-primary hover:underline">
-              Back to Login
-            </Link>
-          </form>
-        </CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              {...register('confirmPassword')}
+              disabled={loading}
+            />
+            {errors.confirmPassword && (
+              <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Reset Password
+          </Button>
+
+          <Link to="/login" className="block text-center text-sm text-blue-600 hover:underline">
+            Back to Login
+          </Link>
+        </form>
       </Card>
     </div>
   );

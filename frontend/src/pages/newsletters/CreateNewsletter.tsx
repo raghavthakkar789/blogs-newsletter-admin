@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,6 +43,48 @@ export default function CreateNewsletter() {
   });
 
   const content = watch('content');
+  const watchSummary = watch('summary');
+  const watchTitle = watch('title');
+  const watchCategory = watch('category');
+  const watchTags = watch('tags');
+  const watchImage = watch('image');
+
+  // Auto-save draft to localStorage
+  useEffect(() => {
+    const draft = {
+      title: watchTitle || '',
+      summary: watchSummary || '',
+      content: content || '',
+      category: watchCategory || '',
+      tags: watchTags || '',
+      image: watchImage || ''
+    };
+    if (draft.title || draft.content) {
+      localStorage.setItem('newsletter-draft', JSON.stringify(draft));
+    }
+  }, [watchTitle, watchSummary, watchCategory, watchTags, watchImage, content]);
+
+  // Load draft on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('newsletter-draft');
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        if (draft.title || draft.content) {
+          if (confirm('Found a saved newsletter draft. Would you like to restore it?')) {
+            setValue('title', draft.title);
+            setValue('summary', draft.summary);
+            setValue('content', draft.content);
+            setValue('category', draft.category);
+            setValue('tags', draft.tags);
+            setValue('image', draft.image);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [setValue]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,6 +105,7 @@ export default function CreateNewsletter() {
   const onSubmit = async (data: NewsletterFormData) => {
     try {
       setLoading(true);
+      localStorage.removeItem('newsletter-draft');
       const tags = data.tags
         ? data.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
         : [];

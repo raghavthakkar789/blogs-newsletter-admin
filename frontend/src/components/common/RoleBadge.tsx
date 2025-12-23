@@ -16,12 +16,13 @@ const roleConfig: Record<Role, { color: string; icon: string; label: string }> =
 
 interface RoleBadgeProps {
   role: Role;
+  className?: string;
 }
 
-export function RoleBadge({ role }: RoleBadgeProps) {
+export function RoleBadge({ role, className }: RoleBadgeProps) {
   const config = roleConfig[role];
   return (
-    <Badge variant="outline" className={`${config.color} border`}>
+    <Badge variant="outline" className={`${config.color} border ${className || ''}`}>
       <span className="mr-1">{config.icon}</span>
       {config.label}
     </Badge>

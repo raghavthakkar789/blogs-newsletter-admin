@@ -1,14 +1,25 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
-import { authService } from '@/services/api';
+import { authService, analyticsService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { RoleBadge } from '@/components/common/RoleBadge';
 import { toast } from 'sonner';
+import { Upload, Loader2, Eye, EyeOff } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address')
+});
 
 const changePasswordSchema = z
   .object({
@@ -27,114 +38,275 @@ const changePasswordSchema = z
     path: ['confirmPassword']
   });
 
+type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export default function Profile() {
   const { user, refreshUser } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  const { data: stats } = useQuery({
+    queryKey: ['user-stats', user?.id],
+    queryFn: () => analyticsService.getDashboard(),
+    enabled: !!user?.id
+  });
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset
+    register: registerProfile,
+    handleSubmit: handleSubmitProfile,
+    formState: { errors: profileErrors },
+    reset: resetProfile
+  } = useForm<UpdateProfileFormData>({
+    resolver: zodResolver(updateProfileSchema),
+    defaultValues: {
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || ''
+    }
+  });
+
+  const {
+    register: registerPassword,
+    handleSubmit: handleSubmitPassword,
+    formState: { errors: passwordErrors },
+    reset: resetPassword
   } = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema)
   });
 
-  const onSubmit = async (data: ChangePasswordFormData) => {
+  const onSubmitProfile = async (data: UpdateProfileFormData) => {
     try {
-      setLoading(true);
-      await authService.changePassword(data.currentPassword, data.newPassword);
-      toast.success('Password changed successfully');
-      reset();
+      setIsUpdatingProfile(true);
+      await authService.updateProfile(data);
+      await refreshUser();
+      toast.success('Profile updated successfully');
+      resetProfile();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      toast.error(error.response?.data?.message || 'Failed to update profile');
     } finally {
-      setLoading(false);
+      setIsUpdatingProfile(false);
     }
   };
 
+  const onSubmitPassword = async (data: ChangePasswordFormData) => {
+    try {
+      setIsUpdatingPassword(true);
+      await authService.changePassword(data.currentPassword, data.newPassword);
+      toast.success('Password changed successfully');
+      resetPassword();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const totalBlogs = stats?.blogs?.total || 0;
+  const totalNewsletters = stats?.newsletters?.total || 0;
+  const approvedContent = (stats?.blogs?.approved || 0) + (stats?.newsletters?.approved || 0);
+  const pendingContent = (stats?.blogs?.pending || 0) + (stats?.newsletters?.pending || 0);
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+        <h1 className="text-3xl font-bold">Profile</h1>
         <p className="text-gray-600 mt-1">Manage your account settings</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>Your account details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Name</Label>
-            <p className="text-lg font-medium">
-              {user?.firstName} {user?.lastName}
-            </p>
-          </div>
-          <div>
-            <Label>Email</Label>
-            <p className="text-lg font-medium">{user?.email}</p>
-          </div>
-          <div>
-            <Label>Role</Label>
-            <p className="text-lg font-medium">{user?.role}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sidebar */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Avatar className="h-24 w-24 mx-auto mb-4">
+                <AvatarImage src={user?.avatar || undefined} />
+                <AvatarFallback className="text-2xl">
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <h2 className="text-xl font-semibold">{user?.firstName} {user?.lastName}</h2>
+              <p className="text-gray-600">{user?.email}</p>
+              <RoleBadge role={user?.role || 'MARKETING_MANAGER'} className="mt-3" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                {...register('currentPassword')}
-              />
-              {errors.currentPassword && (
-                <p className="text-sm text-red-500">{errors.currentPassword.message}</p>
-              )}
-            </div>
+              <div className="mt-6 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Member since</span>
+                  <span className="font-medium">
+                    {user?.createdAt ? format(new Date(user.createdAt), 'MMM yyyy') : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Last login</span>
+                  <span className="font-medium">
+                    {user?.lastLogin
+                      ? formatDistanceToNow(new Date(user.lastLogin)) + ' ago'
+                      : 'Never'}
+                  </span>
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                {...register('newPassword')}
-              />
-              {errors.newPassword && (
-                <p className="text-sm text-red-500">{errors.newPassword.message}</p>
-              )}
-            </div>
+              <Button variant="outline" className="w-full mt-6">
+                <Upload className="mr-2 h-4 w-4" />
+                Change Avatar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
-              )}
-            </div>
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Personal Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>First Name</Label>
+                    <Input {...registerProfile('firstName')} />
+                    {profileErrors.firstName && (
+                      <p className="text-red-500 text-sm mt-1">{profileErrors.firstName.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Last Name</Label>
+                    <Input {...registerProfile('lastName')} />
+                    {profileErrors.lastName && (
+                      <p className="text-red-500 text-sm mt-1">{profileErrors.lastName.message}</p>
+                    )}
+                  </div>
+                </div>
 
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Changing...' : 'Change Password'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                <div>
+                  <Label>Email</Label>
+                  <Input {...registerProfile('email')} type="email" />
+                  {profileErrors.email && (
+                    <p className="text-red-500 text-sm mt-1">{profileErrors.email.message}</p>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={isUpdatingProfile}>
+                  {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update Profile
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Change Password */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitPassword(onSubmitPassword)} className="space-y-4">
+                <div>
+                  <Label>Current Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...registerPassword('currentPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    >
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordErrors.currentPassword && (
+                    <p className="text-red-500 text-sm mt-1">{passwordErrors.currentPassword.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label>New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...registerPassword('newPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordErrors.newPassword && (
+                    <p className="text-red-500 text-sm mt-1">{passwordErrors.newPassword.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      {...registerPassword('confirmPassword')}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordErrors.confirmPassword && (
+                    <p className="text-red-500 text-sm mt-1">{passwordErrors.confirmPassword.message}</p>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={isUpdatingPassword}>
+                  {isUpdatingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Change Password
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Account Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Content</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-3xl font-bold text-blue-600">{totalBlogs}</p>
+                  <p className="text-sm text-gray-600">Total Blogs</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-3xl font-bold text-purple-600">{totalNewsletters}</p>
+                  <p className="text-sm text-gray-600">Total Newsletters</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-3xl font-bold text-green-600">{approvedContent}</p>
+                  <p className="text-sm text-gray-600">Approved</p>
+                </div>
+                <div className="text-center p-4 bg-amber-50 rounded-lg">
+                  <p className="text-3xl font-bold text-amber-600">{pendingContent}</p>
+                  <p className="text-sm text-gray-600">Pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
-

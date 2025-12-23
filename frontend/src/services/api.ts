@@ -41,6 +41,14 @@ export const authService = {
     const response = await api.post('/auth/change-password', { currentPassword, newPassword });
     return response.data;
   },
+  updateProfile: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  }): Promise<{ user: User }> => {
+    const response = await api.patch('/auth/profile', data);
+    return response.data;
+  },
 };
 
 // Users (Admin only)
@@ -97,7 +105,8 @@ export const blogService = {
     createdById?: string;
     search?: string;
   }): Promise<{ blogs: Blog[]; total: number; page: number; totalPages: number }> => {
-    const response = await api.get('/blogs', { params });
+    // Use authenticated internal endpoint so status filters and role-based access work for the dashboard
+    const response = await api.get('/blogs/admin/internal', { params });
     return response.data;
   },
   getBlog: async (id: string): Promise<{ blog: Blog }> => {
@@ -136,6 +145,13 @@ export const blogService = {
     const response = await api.patch(`/blogs/${id}/status`, { status });
     return response.data;
   },
+  bulkUpdateBlogStatus: async (
+    ids: string[],
+    status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  ): Promise<{ updatedCount: number }> => {
+    const response = await api.patch('/blogs/bulk/status', { ids, status });
+    return response.data;
+  },
 };
 
 // Newsletters
@@ -147,7 +163,8 @@ export const newsletterService = {
     createdById?: string;
     search?: string;
   }): Promise<{ newsletters: Newsletter[]; total: number; page: number; totalPages: number }> => {
-    const response = await api.get('/newsletters', { params });
+    // Use authenticated internal endpoint so status filters and role-based access work for the dashboard
+    const response = await api.get('/newsletters/admin/internal', { params });
     return response.data;
   },
   getNewsletter: async (id: string): Promise<{ newsletter: Newsletter }> => {
@@ -184,6 +201,13 @@ export const newsletterService = {
     const response = await api.patch(`/newsletters/${id}/status`, { status });
     return response.data;
   },
+  bulkUpdateNewsletterStatus: async (
+    ids: string[],
+    status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  ): Promise<{ updatedCount: number }> => {
+    const response = await api.patch('/newsletters/bulk/status', { ids, status });
+    return response.data;
+  },
 };
 
 // Analytics
@@ -198,6 +222,8 @@ export const analyticsService = {
     userId?: string;
     action?: string;
     entityType?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }): Promise<{ logs: ActivityLog[]; total: number; page: number; totalPages: number }> => {
     const response = await api.get('/analytics/activity-logs', { params });
     return response.data;
@@ -219,6 +245,24 @@ export const uploadService = {
 };
 
 // AI Content Generation
+export const aiService = {
+  generateBlogContent: async (data: {
+    idea: string;
+    details?: string;
+  }): Promise<{
+    title: string;
+    content: string;
+    summary: string;
+    tags?: string[];
+  }> => {
+    const response = await api.post('/generate-content', {
+      blogIdea: data.idea,
+      blogAbout: data.details || ''
+    });
+    return response.data;
+  },
+};
+
 export const generateContentService = {
   generateContent: async (blogIdea: string, blogAbout: string): Promise<{
     title: string;

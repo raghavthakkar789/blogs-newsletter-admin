@@ -24,6 +24,9 @@ import Profile from './pages/Profile';
 function App() {
   return (
     <Routes>
+      {/* Root Route */}
+      <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -32,7 +35,7 @@ function App() {
       {/* Protected Routes */}
       <Route path="/admin" element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/admin/dashboard" />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
 
           {/* Blogs */}

@@ -1,6 +1,11 @@
-import { User, Blog, Newsletter, ContentStatus } from '@prisma/client';
+import { Blog, Newsletter } from '@prisma/client';
 
-export const canAccessBlog = (user: User, blog: Blog): boolean => {
+type AccessUser = {
+  id: string;
+  role: 'ADMIN' | 'MARKETING_MANAGER';
+};
+
+export const canAccessBlog = (user: AccessUser, blog: Blog): boolean => {
   if (user.role === 'ADMIN') return true;
   
   if (user.role === 'MARKETING_MANAGER') {
@@ -10,7 +15,7 @@ export const canAccessBlog = (user: User, blog: Blog): boolean => {
   return false;
 };
 
-export const canEditBlog = (user: User, blog: Blog): boolean => {
+export const canEditBlog = (user: AccessUser, blog: Blog): boolean => {
   if (user.role === 'ADMIN') return true;
   
   if (user.role === 'MARKETING_MANAGER') {
@@ -23,15 +28,15 @@ export const canEditBlog = (user: User, blog: Blog): boolean => {
   return false;
 };
 
-export const canDeleteBlog = (user: User, blog: Blog): boolean => {
+export const canDeleteBlog = (user: AccessUser, blog: Blog): boolean => {
   return user.role === 'ADMIN';
 };
 
-export const canApproveContent = (user: User): boolean => {
+export const canApproveContent = (user: AccessUser): boolean => {
   return user.role === 'ADMIN';
 };
 
-export const canAccessNewsletter = (user: User, newsletter: Newsletter): boolean => {
+export const canAccessNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
   if (user.role === 'ADMIN') return true;
   
   if (user.role === 'MARKETING_MANAGER') {
@@ -41,7 +46,7 @@ export const canAccessNewsletter = (user: User, newsletter: Newsletter): boolean
   return false;
 };
 
-export const canEditNewsletter = (user: User, newsletter: Newsletter): boolean => {
+export const canEditNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
   if (user.role === 'ADMIN') return true;
   
   if (user.role === 'MARKETING_MANAGER') {
@@ -54,7 +59,7 @@ export const canEditNewsletter = (user: User, newsletter: Newsletter): boolean =
   return false;
 };
 
-export const canDeleteNewsletter = (user: User, newsletter: Newsletter): boolean => {
+export const canDeleteNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
   return user.role === 'ADMIN';
 };
 

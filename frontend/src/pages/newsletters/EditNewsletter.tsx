@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Ban, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -120,6 +120,18 @@ export default function EditNewsletter() {
     updateMutation.mutate(data);
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: () => newsletterService.deleteNewsletter(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['newsletters'] });
+      toast.success('Newsletter deleted successfully');
+      navigate('/admin/newsletters');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete newsletter');
+    }
+  });
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -145,19 +157,58 @@ export default function EditNewsletter() {
         </div>
         {user?.role === 'ADMIN' && (
           <div className="flex gap-2">
+            {newsletter.status === 'PENDING' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => statusMutation.mutate('APPROVED')}
+                  disabled={statusMutation.isPending}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => statusMutation.mutate('REJECTED')}
+                  disabled={statusMutation.isPending}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Reject
+                </Button>
+              </>
+            )}
+            {newsletter.status === 'APPROVED' && (
+              <Button
+                variant="outline"
+                onClick={() => statusMutation.mutate('DISABLED')}
+                disabled={statusMutation.isPending}
+              >
+                <Ban className="w-4 h-4 mr-1" />
+                Disable
+              </Button>
+            )}
+            {newsletter.status === 'DISABLED' && (
+              <Button
+                variant="outline"
+                onClick={() => statusMutation.mutate('APPROVED')}
+                disabled={statusMutation.isPending}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Re-enable
+              </Button>
+            )}
             <Button
               variant="outline"
-              onClick={() => statusMutation.mutate('APPROVED')}
-              disabled={statusMutation.isPending || newsletter.status === 'APPROVED'}
+              className="text-red-600"
+              onClick={() => {
+                if (confirm('Are you sure you want to delete this newsletter?')) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
             >
-              Approve
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => statusMutation.mutate('REJECTED')}
-              disabled={statusMutation.isPending || newsletter.status === 'REJECTED'}
-            >
-              Reject
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
             </Button>
           </div>
         )}
