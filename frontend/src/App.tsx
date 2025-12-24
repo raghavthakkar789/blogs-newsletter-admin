@@ -17,8 +17,6 @@ import EditNewsletter from './pages/newsletters/EditNewsletter';
 import UsersPage from './pages/users/UsersPage';
 import CreateUser from './pages/users/CreateUser';
 import EditUser from './pages/users/EditUser';
-import ActivityLogs from './pages/ActivityLogs';
-import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 
 function App() {
@@ -70,26 +68,6 @@ function App() {
             element={
               <RoleGuard allowedRoles={['ADMIN']}>
                 <EditUser />
-              </RoleGuard>
-            }
-          />
-
-          {/* Activity Logs - Admin Only */}
-          <Route
-            path="activity-logs"
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <ActivityLogs />
-              </RoleGuard>
-            }
-          />
-
-          {/* Settings - Admin Only */}
-          <Route
-            path="settings"
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <Settings />
               </RoleGuard>
             }
           />

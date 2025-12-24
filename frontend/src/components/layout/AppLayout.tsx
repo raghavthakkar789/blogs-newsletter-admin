@@ -20,11 +20,11 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col overflow-hidden lg:pl-64">
         <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 bg-background">
           <Outlet />
         </main>
       </div>

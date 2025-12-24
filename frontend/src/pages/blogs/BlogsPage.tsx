@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { blogService } from '@/services/api';
@@ -186,8 +186,8 @@ export default function BlogsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Blogs</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-foreground">Blogs</h1>
+          <p className="text-muted-foreground mt-1">
             {user?.role === 'ADMIN' ? 'Manage all blog posts' : 'Manage your blog posts'}
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function BlogsPage() {
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search blogs by title..."
                 value={search}
@@ -225,25 +225,25 @@ export default function BlogsPage() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-amber-600" />
+                    <Clock className="h-4 w-4 text-amber-400" />
                     Pending
                   </div>
                 </SelectItem>
                 <SelectItem value="APPROVED">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-green-400" />
                     Approved
                   </div>
                 </SelectItem>
                 <SelectItem value="REJECTED">
                   <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-600" />
+                    <XCircle className="h-4 w-4 text-red-400" />
                     Rejected
                   </div>
                 </SelectItem>
                 <SelectItem value="DISABLED">
                   <div className="flex items-center gap-2">
-                    <Ban className="h-4 w-4 text-gray-600" />
+                    <Ban className="h-4 w-4 text-muted-foreground" />
                     Disabled
                   </div>
                 </SelectItem>
@@ -276,9 +276,9 @@ export default function BlogsPage() {
           {[1, 2, 3].map(i => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                <div className="h-3 bg-muted rounded w-full mb-2"></div>
+                <div className="h-3 bg-muted rounded w-2/3"></div>
               </CardContent>
             </Card>
           ))}
@@ -295,7 +295,7 @@ export default function BlogsPage() {
         <>
           {user?.role === 'ADMIN' && (
             <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 {hasSelection
                   ? `${selectedIds.length} selected`
                   : 'Select blogs to bulk approve or reject'}
@@ -327,7 +327,7 @@ export default function BlogsPage() {
               <Card
                 key={blog.id}
                 className={`overflow-hidden hover:shadow-lg transition-shadow ${
-                  selectedIds.includes(blog.id) ? 'ring-2 ring-blue-500' : ''
+                  selectedIds.includes(blog.id) ? 'ring-2 ring-primary' : ''
                 }`}
                 onClick={() => toggleSelect(blog.id)}
               >
@@ -364,7 +364,7 @@ export default function BlogsPage() {
                         )}
                         {user?.role === 'ADMIN' && blog.status === 'APPROVED' && (
                           <DropdownMenuItem onClick={() => handleDisable(blog.id)}>
-                            <Ban className="mr-2 h-4 w-4 text-gray-600" />
+                            <Ban className="mr-2 h-4 w-4 text-muted-foreground" />
                             Disable
                           </DropdownMenuItem>
                         )}
@@ -384,10 +384,10 @@ export default function BlogsPage() {
                     </DropdownMenu>
                   </div>
                   <h3 className="text-xl font-semibold mb-2 line-clamp-2">{blog.title}</h3>
-                  <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                  <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
                     {blog.summary || blog.content.substring(0, 150)}...
                   </p>
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
                     <span>{blog.category || 'Uncategorized'}</span>
                     <span>{format(new Date(blog.createdAt), 'MMM dd, yyyy')}</span>
                   </div>
@@ -412,7 +412,7 @@ export default function BlogsPage() {
                   </Button>
                   {user?.role === 'ADMIN' && blog.status === 'PENDING' && (
                     <Button
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-green-500 hover:bg-green-600"
                       onClick={() => handleApprove(blog.id)}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
@@ -435,7 +435,7 @@ export default function BlogsPage() {
         </>
       ) : (
         <>
-        <Card>
+          <Card>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -475,7 +475,7 @@ export default function BlogsPage() {
                         )}
                         <div>
                           <p className="font-medium">{blog.title}</p>
-                          <p className="text-sm text-gray-500 line-clamp-1">
+                          <p className="text-sm text-muted-foreground line-clamp-1">
                             {blog.summary || blog.content.substring(0, 100)}...
                           </p>
                         </div>
@@ -513,7 +513,7 @@ export default function BlogsPage() {
                           )}
                           {user?.role === 'ADMIN' && blog.status === 'APPROVED' && (
                             <DropdownMenuItem onClick={() => handleDisable(blog.id)}>
-                              <Ban className="mr-2 h-4 w-4 text-gray-600" />
+                              <Ban className="mr-2 h-4 w-4 text-muted-foreground" />
                               Disable
                             </DropdownMenuItem>
                           )}
@@ -524,7 +524,7 @@ export default function BlogsPage() {
                             </DropdownMenuItem>
                           )}
                           {user?.role === 'ADMIN' && (
-                            <DropdownMenuItem onClick={() => handleDelete(blog.id)} className="text-red-600">
+                            <DropdownMenuItem onClick={() => handleDelete(blog.id)} className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>

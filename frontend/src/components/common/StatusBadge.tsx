@@ -4,22 +4,22 @@ import { Clock, CheckCircle, XCircle, Ban } from 'lucide-react';
 
 const statusConfig: Record<ContentStatus, { color: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
   PENDING: {
-    color: 'bg-amber-100 text-amber-800 border-amber-200',
+    color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     icon: Clock,
     label: 'Pending'
   },
   APPROVED: {
-    color: 'bg-green-100 text-green-800 border-green-200',
+    color: 'bg-green-500/20 text-green-400 border-green-500/30',
     icon: CheckCircle,
     label: 'Approved'
   },
   REJECTED: {
-    color: 'bg-red-100 text-red-800 border-red-200',
+    color: 'bg-red-500/20 text-red-400 border-red-500/30',
     icon: XCircle,
     label: 'Rejected'
   },
   DISABLED: {
-    color: 'bg-gray-100 text-gray-800 border-gray-200',
+    color: 'bg-muted text-muted-foreground border-border',
     icon: Ban,
     label: 'Disabled'
   }

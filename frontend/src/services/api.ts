@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import { User, Blog, Newsletter, ActivityLog, DashboardStats, PaginatedResponse } from '../types';
+import { User, Blog, Newsletter, ActivityLog, DashboardStats } from '../types';
 
 // Auth
 export const authService = {

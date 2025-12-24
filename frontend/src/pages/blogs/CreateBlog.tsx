@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -227,7 +227,7 @@ export default function CreateBlog() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Create Blog</h1>
-          <p className="text-gray-600 mt-1">Write and publish a new blog post</p>
+          <p className="text-muted-foreground mt-1">Write and publish a new blog post</p>
         </div>
         <Button variant="outline" onClick={() => navigate('/admin/blogs')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -251,7 +251,7 @@ export default function CreateBlog() {
                   {...register('title')}
                 />
                 {errors.title && (
-                  <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.title.message}</p>
                 )}
               </div>
 
@@ -263,7 +263,7 @@ export default function CreateBlog() {
                   placeholder="Brief summary of the blog..."
                   {...register('summary')}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {(watchSummary?.length || 0)}/500 characters
                 </p>
                 {errors.summary && (
@@ -326,7 +326,7 @@ export default function CreateBlog() {
                           <button
                             type="button"
                             onClick={() => handleRemoveTag(index)}
-                            className="ml-1 hover:text-red-600"
+                            className="ml-1 hover:text-destructive"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -361,7 +361,7 @@ export default function CreateBlog() {
                 onChange={(value) => setValue('content', value)}
               />
               {errors.content && (
-                <p className="text-red-500 text-sm mt-2">{errors.content.message}</p>
+                <p className="text-destructive text-sm mt-2">{errors.content.message}</p>
               )}
             </CardContent>
           </Card>
@@ -381,46 +381,49 @@ export default function CreateBlog() {
                     {...register('image')}
                   />
                   {errors.image && (
-                    <p className="text-red-500 text-sm mt-1">{errors.image.message}</p>
+                    <p className="text-destructive text-sm mt-1">{errors.image.message}</p>
                   )}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     You can paste a direct image URL or upload an image file below.
                   </p>
                 </div>
 
-                {!imagePreview && !watchImage ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      id="image-upload"
-                      onChange={handleImageUpload}
-                    />
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                      <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-lg font-medium mb-1">Upload an image</p>
-                      <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <img
-                      src={imagePreview || watchImage || ''}
-                      alt="Preview"
-                      className="w-full rounded-lg"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={handleRemoveImage}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+              {!imagePreview && !watchImage ? (
+                  <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="image-upload"
+                    onChange={handleImageUpload}
+                      disabled={uploading}
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium mb-1">
+                        {uploading ? 'Uploading image...' : 'Upload an image'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
+                  </label>
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={imagePreview || watchImage || ''}
+                    alt="Preview"
+                    className="w-full rounded-lg"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={handleRemoveImage}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               </div>
             </CardContent>
           </Card>

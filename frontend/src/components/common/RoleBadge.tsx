@@ -3,12 +3,12 @@ import { Badge } from '@/components/ui/badge';
 
 const roleConfig: Record<Role, { color: string; icon: string; label: string }> = {
   ADMIN: {
-    color: 'bg-purple-100 text-purple-800 border-purple-200',
+    color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     icon: '👑',
     label: 'Admin'
   },
   MARKETING_MANAGER: {
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     icon: '📊',
     label: 'Marketing Manager'
   }

@@ -24,7 +24,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-card">
       <ReactQuill
         ref={quillRef}
         theme="snow"
@@ -32,7 +32,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         onChange={onChange}
         modules={modules}
         placeholder={placeholder}
-        className="min-h-[300px]"
+        className="min-h-[300px] [&_.ql-editor]:bg-card [&_.ql-editor]:text-foreground [&_.ql-toolbar]:bg-muted [&_.ql-toolbar]:border-border [&_.ql-container]:border-border"
       />
     </div>
   );

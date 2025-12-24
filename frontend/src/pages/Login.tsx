@@ -56,13 +56,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md p-8 shadow-xl border-border">
         <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-white">A</span>
+          <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-primary-foreground">A</span>
           </div>
-          <CardTitle className="text-2xl">Admin Panel</CardTitle>
+          <CardTitle className="text-2xl text-foreground">Admin Panel</CardTitle>
           <CardDescription className="mt-2">Sign in to your account</CardDescription>
         </div>
 
@@ -84,7 +84,7 @@ export default function Login() {
               disabled={loading}
             />
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 
@@ -100,14 +100,14 @@ export default function Login() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+              <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
 
@@ -120,7 +120,7 @@ export default function Login() {
             </div>
             <Link
               to="/forgot-password"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary hover:underline transition-colors"
             >
               Forgot password?
             </Link>

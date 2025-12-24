@@ -138,8 +138,8 @@ export default function NewslettersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Newsletters</h1>
-          <p className="text-gray-600 mt-1">Manage your newsletters</p>
+          <h1 className="text-3xl font-bold text-foreground">Newsletters</h1>
+          <p className="text-muted-foreground mt-1">Manage your newsletters</p>
         </div>
         <Button onClick={() => navigate('/admin/newsletters/create')}>
           <Plus className="w-4 h-4 mr-2" />
@@ -151,7 +151,7 @@ export default function NewslettersPage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search newsletters..."
                 value={search}
@@ -182,11 +182,11 @@ export default function NewslettersPage() {
           {isLoading ? (
             <div>Loading...</div>
           ) : newsletters.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No newsletters found</div>
+            <div className="text-center py-8 text-muted-foreground">No newsletters found</div>
           ) : (
             <div className="space-y-4">
             {user?.role === 'ADMIN' && (
-              <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between mb-2 text-sm text-muted-foreground">
                 <div>
                   {hasSelection
                     ? `${selectedIds.length} selected`
@@ -222,14 +222,14 @@ export default function NewslettersPage() {
                   checked={isAllSelected}
                   onChange={toggleSelectAll}
                 />
-                <span className="text-sm text-gray-600">Select all</span>
+                <span className="text-sm text-muted-foreground">Select all</span>
               </div>
             )}
 
               {newsletters.map((newsletter) => (
                 <div
                   key={newsletter.id}
-                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 ${
+                  className={`flex items-center justify-between p-4 border rounded-lg hover:bg-accent ${
                     selectedIds.includes(newsletter.id) ? 'ring-2 ring-blue-500' : ''
                   }`}
                 >
@@ -246,10 +246,10 @@ export default function NewslettersPage() {
                       </Link>
                       <StatusBadge status={newsletter.status} />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {newsletter.summary || newsletter.content.substring(0, 100)}...
                     </p>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-muted-foreground/70 mt-2">
                       Created by {newsletter.createdBy?.firstName} {newsletter.createdBy?.lastName} •{' '}
                       {format(new Date(newsletter.createdAt), 'MMM d, yyyy')}
                     </p>
@@ -288,7 +288,7 @@ export default function NewslettersPage() {
                           size="icon"
                           onClick={() => handleDisable(newsletter.id)}
                         >
-                          <Ban className="w-4 h-4 text-gray-600" />
+                          <Ban className="w-4 h-4 text-muted-foreground" />
                         </Button>
                       )}
                       {newsletter.status === 'DISABLED' && (
@@ -303,7 +303,7 @@ export default function NewslettersPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="text-red-600"
+                        className="text-destructive"
                         onClick={() => handleDelete(newsletter.id)}
                       >
                         <Trash2 className="w-4 h-4" />

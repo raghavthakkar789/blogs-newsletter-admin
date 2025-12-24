@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, User, Settings, LogOut, Menu } from 'lucide-react';
+import { Bell, User, LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/services/api';
 
@@ -33,38 +33,36 @@ export function Header({ onMenuToggle }: HeaderProps) {
     if (path.includes('/blogs')) return 'Blogs';
     if (path.includes('/newsletters')) return 'Newsletters';
     if (path.includes('/users')) return 'Users';
-    if (path.includes('/activity-logs')) return 'Activity Logs';
-    if (path.includes('/settings')) return 'Settings';
     if (path.includes('/profile')) return 'Profile';
     return 'Admin Panel';
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-40 bg-card border-b border-border backdrop-blur-sm bg-opacity-95">
       <div className="flex items-center justify-between h-16 px-6">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="lg:hidden hover:bg-accent hover:brightness-110 active:brightness-95"
             onClick={onMenuToggle}
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-foreground">
             {getPageTitle()}
           </h2>
         </div>
 
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative">
+          <Button variant="ghost" size="icon" className="relative hover:bg-accent hover:brightness-110 active:brightness-95 transition-all duration-200">
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full animate-pulse"></span>
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-3">
+              <Button variant="ghost" className="flex items-center gap-3 hover:bg-accent hover:brightness-110 active:brightness-95 transition-all duration-200">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar || undefined} />
                   <AvatarFallback>
@@ -72,10 +70,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-medium text-foreground">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-gray-500">{user?.role}</p>
+                  <p className="text-xs text-muted-foreground">{user?.role}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -84,12 +82,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              {user?.role === 'ADMIN' && (
-                <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />

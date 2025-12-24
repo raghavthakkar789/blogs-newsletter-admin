@@ -46,15 +46,15 @@ export default function ForgotPassword() {
 
   if (sent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Card className="w-full max-w-md p-8 shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md p-8 shadow-xl border-border">
           <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Check className="h-8 w-8 text-green-600" />
+            <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+              <Check className="h-8 w-8 text-green-400" />
             </div>
-            <CardTitle className="text-2xl mb-2">Check your email</CardTitle>
+            <CardTitle className="text-2xl mb-2 text-foreground">Check your email</CardTitle>
             <CardDescription className="mt-2">
-              We've sent a password reset link to <strong>{email}</strong>
+              We've sent a password reset link to <strong className="text-foreground">{email}</strong>
             </CardDescription>
             <div className="mt-6">
               <Link to="/login">
@@ -70,13 +70,13 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md p-8 shadow-xl border-border">
         <div className="text-center mb-8">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Mail className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+            <Mail className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Forgot Password?</CardTitle>
+          <CardTitle className="text-2xl text-foreground">Forgot Password?</CardTitle>
           <CardDescription className="mt-2">
             Enter your email and we'll send you a reset link
           </CardDescription>
@@ -93,7 +93,7 @@ export default function ForgotPassword() {
               disabled={loading}
             />
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
 
@@ -103,7 +103,7 @@ export default function ForgotPassword() {
           </Button>
 
           <div className="text-center">
-            <Link to="/login" className="text-sm text-blue-600 hover:underline">
+            <Link to="/login" className="text-sm text-primary hover:underline transition-colors">
               Back to login
             </Link>
           </div>

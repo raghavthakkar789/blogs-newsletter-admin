@@ -86,8 +86,8 @@ export default function EditUser() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit User</h1>
-          <p className="text-gray-600 mt-1">Update user account details</p>
+          <h1 className="text-3xl font-bold text-foreground">Edit User</h1>
+          <p className="text-muted-foreground mt-1">Update user account details</p>
         </div>
       </div>
 

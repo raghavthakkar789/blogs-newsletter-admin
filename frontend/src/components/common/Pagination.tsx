@@ -17,7 +17,7 @@ export function Pagination({ page, totalPages, onPageChange, total, limit }: Pag
 
   return (
     <div className="flex items-center justify-between">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted-foreground">
         Showing {start} to {end} of {total} results
       </p>
       <div className="flex items-center gap-2">
@@ -26,6 +26,7 @@ export function Pagination({ page, totalPages, onPageChange, total, limit }: Pag
           size="sm"
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
+          className="transition-all duration-200 hover:brightness-110 active:brightness-95"
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
@@ -50,6 +51,7 @@ export function Pagination({ page, totalPages, onPageChange, total, limit }: Pag
                 variant={page === pageNum ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => onPageChange(pageNum)}
+                className="transition-all duration-200 hover:brightness-110 active:brightness-95"
               >
                 {pageNum}
               </Button>
@@ -62,6 +64,7 @@ export function Pagination({ page, totalPages, onPageChange, total, limit }: Pag
           size="sm"
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
+          className="transition-all duration-200 hover:brightness-110 active:brightness-95"
         >
           Next
           <ChevronRight className="h-4 w-4" />

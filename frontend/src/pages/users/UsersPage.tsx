@@ -34,8 +34,8 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-600 mt-1">Manage user accounts</p>
+          <h1 className="text-3xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground mt-1">Manage user accounts</p>
         </div>
         <Link to="/admin/users/create">
           <Button>
@@ -49,7 +49,7 @@ export default function UsersPage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search users..."
                 value={search}
@@ -66,7 +66,7 @@ export default function UsersPage() {
                 setRoleFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border rounded-md"
+              className="px-3 py-2 border-2 border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200"
             >
               <option value="">All Roles</option>
               <option value="ADMIN">Admin</option>
@@ -78,7 +78,7 @@ export default function UsersPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border rounded-md"
+              className="px-3 py-2 border-2 border-input bg-background rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200"
             >
               <option value="">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -91,13 +91,13 @@ export default function UsersPage() {
           {isLoading ? (
             <div>Loading...</div>
           ) : users.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-muted-foreground">No users found</div>
           ) : (
             <div className="space-y-4">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-all duration-200"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
@@ -109,8 +109,8 @@ export default function UsersPage() {
                       </Link>
                       <RoleBadge role={user.role} />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{user.email}</p>
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
+                    <p className="text-xs text-muted-foreground/70 mt-2">
                       Created {format(new Date(user.createdAt), 'MMM d, yyyy')}
                     </p>
                   </div>

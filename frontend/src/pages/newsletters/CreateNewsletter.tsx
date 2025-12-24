@@ -134,8 +134,8 @@ export default function CreateNewsletter() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Newsletter</h1>
-          <p className="text-gray-600 mt-1">Create a new newsletter</p>
+          <h1 className="text-3xl font-bold text-foreground">Create Newsletter</h1>
+          <p className="text-muted-foreground mt-1">Create a new newsletter</p>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function CreateNewsletter() {
               <Label htmlFor="title">Title *</Label>
               <Input id="title" {...register('title')} />
               {errors.title && (
-                <p className="text-sm text-red-500">{errors.title.message}</p>
+                <p className="text-sm text-destructive">{errors.title.message}</p>
               )}
             </div>
 

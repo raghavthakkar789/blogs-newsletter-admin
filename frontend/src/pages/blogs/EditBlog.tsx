@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, X, Upload, Trash2, Loader2, Clock, CheckCircle, XCircle, Ban, AlertCircle } from 'lucide-react';
@@ -190,7 +189,7 @@ export default function EditBlog() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -198,7 +197,7 @@ export default function EditBlog() {
   if (!blog) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Blog not found</p>
+        <p className="text-muted-foreground">Blog not found</p>
         <Button onClick={() => navigate('/admin/blogs')} className="mt-4">
           Back to Blogs
         </Button>
@@ -228,7 +227,7 @@ export default function EditBlog() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Edit Blog</h1>
-          <p className="text-gray-600 mt-1">Update blog post details</p>
+          <p className="text-muted-foreground mt-1">Update blog post details</p>
         </div>
         <Button variant="outline" onClick={() => navigate('/admin/blogs')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -270,7 +269,7 @@ export default function EditBlog() {
                   {...register('title')}
                 />
                 {errors.title && (
-                  <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
+                  <p className="text-destructive text-sm mt-1">{errors.title.message}</p>
                 )}
               </div>
 
@@ -282,7 +281,7 @@ export default function EditBlog() {
                   placeholder="Brief summary of the blog..."
                   {...register('summary')}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {(watchSummary?.length || 0)}/500 characters
                 </p>
                 {errors.summary && (
@@ -348,7 +347,7 @@ export default function EditBlog() {
                           <button
                             type="button"
                             onClick={() => handleRemoveTag(index)}
-                            className="ml-1 hover:text-red-600"
+                            className="ml-1 hover:text-destructive"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -372,7 +371,7 @@ export default function EditBlog() {
                 onChange={(value) => setValue('content', value)}
               />
               {errors.content && (
-                <p className="text-red-500 text-sm mt-2">{errors.content.message}</p>
+                <p className="text-destructive text-sm mt-2">{errors.content.message}</p>
               )}
             </CardContent>
           </Card>
@@ -384,18 +383,21 @@ export default function EditBlog() {
             </CardHeader>
             <CardContent>
               {!imagePreview && !watchImage ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors">
+                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
                   <input
                     type="file"
                     accept="image/*"
                     className="hidden"
                     id="image-upload"
                     onChange={handleImageUpload}
+                    disabled={uploading}
                   />
                   <label htmlFor="image-upload" className="cursor-pointer">
-                    <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-lg font-medium mb-1">Upload an image</p>
-                    <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium mb-1">
+                      {uploading ? 'Uploading image...' : 'Upload an image'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
                   </label>
                 </div>
               ) : (

@@ -64,7 +64,7 @@ export default function ResetPassword() {
 
   const getStrengthColor = (strength: number) => {
     if (strength < 50) return 'bg-red-500';
-    if (strength < 75) return 'bg-yellow-500';
+    if (strength < 75) return 'bg-amber-500';
     return 'bg-green-500';
   };
 
@@ -87,13 +87,13 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md p-8 shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md p-8 shadow-xl border-border">
         <div className="text-center mb-8">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-blue-600" />
+          <div className="mx-auto w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+            <Lock className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Reset Password</CardTitle>
+          <CardTitle className="text-2xl text-foreground">Reset Password</CardTitle>
           <CardDescription className="mt-2">Enter your new password</CardDescription>
         </div>
 
@@ -108,19 +108,19 @@ export default function ResetPassword() {
               disabled={loading}
             />
             {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+              <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
 
             {/* Password Strength Indicator */}
             {password && (
               <div className="mt-2">
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all ${getStrengthColor(passwordStrength)}`}
                     style={{ width: `${passwordStrength}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Password must contain: uppercase, lowercase, number, special character (min 8 chars)
                 </p>
               </div>
@@ -137,7 +137,7 @@ export default function ResetPassword() {
               disabled={loading}
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
             )}
           </div>
 
@@ -146,7 +146,7 @@ export default function ResetPassword() {
             Reset Password
           </Button>
 
-          <Link to="/login" className="block text-center text-sm text-blue-600 hover:underline">
+          <Link to="/login" className="block text-center text-sm text-primary hover:underline transition-colors">
             Back to Login
           </Link>
         </form>

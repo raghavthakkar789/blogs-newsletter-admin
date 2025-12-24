@@ -116,7 +116,7 @@ export default function Profile() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="text-gray-600 mt-1">Manage your account settings</p>
+        <p className="text-muted-foreground mt-1">Manage your account settings</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -131,18 +131,18 @@ export default function Profile() {
                 </AvatarFallback>
               </Avatar>
               <h2 className="text-xl font-semibold">{user?.firstName} {user?.lastName}</h2>
-              <p className="text-gray-600">{user?.email}</p>
+              <p className="text-muted-foreground">{user?.email}</p>
               <RoleBadge role={user?.role || 'MARKETING_MANAGER'} className="mt-3" />
 
               <div className="mt-6 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Member since</span>
+                  <span className="text-muted-foreground">Member since</span>
                   <span className="font-medium">
                     {user?.createdAt ? format(new Date(user.createdAt), 'MMM yyyy') : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Last login</span>
+                  <span className="text-muted-foreground">Last login</span>
                   <span className="font-medium">
                     {user?.lastLogin
                       ? formatDistanceToNow(new Date(user.lastLogin)) + ' ago'
@@ -286,21 +286,21 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-3xl font-bold text-blue-600">{totalBlogs}</p>
-                  <p className="text-sm text-gray-600">Total Blogs</p>
+                <div className="text-center p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                  <p className="text-3xl font-bold text-blue-400">{totalBlogs}</p>
+                  <p className="text-sm text-muted-foreground">Total Blogs</p>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-3xl font-bold text-purple-600">{totalNewsletters}</p>
-                  <p className="text-sm text-gray-600">Total Newsletters</p>
+                <div className="text-center p-4 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                  <p className="text-3xl font-bold text-purple-400">{totalNewsletters}</p>
+                  <p className="text-sm text-muted-foreground">Total Newsletters</p>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-3xl font-bold text-green-600">{approvedContent}</p>
-                  <p className="text-sm text-gray-600">Approved</p>
+                <div className="text-center p-4 bg-green-500/20 rounded-lg border border-green-500/30">
+                  <p className="text-3xl font-bold text-green-400">{approvedContent}</p>
+                  <p className="text-sm text-muted-foreground">Approved</p>
                 </div>
-                <div className="text-center p-4 bg-amber-50 rounded-lg">
-                  <p className="text-3xl font-bold text-amber-600">{pendingContent}</p>
-                  <p className="text-sm text-gray-600">Pending</p>
+                <div className="text-center p-4 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                  <p className="text-3xl font-bold text-amber-400">{pendingContent}</p>
+                  <p className="text-sm text-muted-foreground">Pending</p>
                 </div>
               </div>
             </CardContent>

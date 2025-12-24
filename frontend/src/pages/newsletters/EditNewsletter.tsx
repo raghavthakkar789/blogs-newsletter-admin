@@ -150,10 +150,10 @@ export default function EditNewsletter() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">Edit Newsletter</h1>
+            <h1 className="text-3xl font-bold text-foreground">Edit Newsletter</h1>
             <StatusBadge status={newsletter.status} />
           </div>
-          <p className="text-gray-600 mt-1">Update newsletter details</p>
+          <p className="text-muted-foreground mt-1">Update newsletter details</p>
         </div>
         {user?.role === 'ADMIN' && (
           <div className="flex gap-2">
@@ -224,7 +224,7 @@ export default function EditNewsletter() {
               <Label htmlFor="title">Title *</Label>
               <Input id="title" {...register('title')} />
               {errors.title && (
-                <p className="text-sm text-red-500">{errors.title.message}</p>
+                <p className="text-sm text-destructive">{errors.title.message}</p>
               )}
             </div>
 

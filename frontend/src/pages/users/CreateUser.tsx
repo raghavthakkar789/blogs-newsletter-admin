@@ -65,8 +65,8 @@ export default function CreateUser() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create User</h1>
-          <p className="text-gray-600 mt-1">Create a new user account</p>
+          <h1 className="text-3xl font-bold text-foreground">Create User</h1>
+          <p className="text-muted-foreground mt-1">Create a new user account</p>
         </div>
       </div>
 

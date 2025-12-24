@@ -5,8 +5,6 @@ import {
   FileText,
   Mail,
   Users,
-  Activity,
-  Settings,
   User as UserIcon,
   X
 } from 'lucide-react';
@@ -40,20 +38,6 @@ const navigationItems = [
     path: '/admin/users',
     roles: ['ADMIN'] as Role[],
     adminOnly: true
-  },
-  {
-    label: 'Activity Logs',
-    icon: Activity,
-    path: '/admin/activity-logs',
-    roles: ['ADMIN'] as Role[],
-    adminOnly: true
-  },
-  {
-    label: 'Settings',
-    icon: Settings,
-    path: '/admin/settings',
-    roles: ['ADMIN'] as Role[],
-    adminOnly: true
   }
 ];
 
@@ -83,7 +67,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-300 ease-in-out',
           // On desktop (lg), always show sidebar regardless of isOpen state
           'lg:translate-x-0',
           // On mobile, use isOpen state
@@ -92,12 +76,12 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
+            <h1 className="text-xl font-bold text-foreground">Admin Panel</h1>
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden hover:bg-accent"
               onClick={onClose}
             >
               <X className="h-5 w-5" />
@@ -122,10 +106,10 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     }
                   }}
                   className={cn(
-                    'flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer',
+                    'flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer',
                     isActive
-                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary text-primary-foreground border-r-2 border-primary shadow-sm brightness-110'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:brightness-110 active:brightness-95'
                   )}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -139,16 +123,16 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
           </nav>
 
           {/* User Info */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-border">
             <div className="px-4 py-2 mb-2">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-foreground">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
               {user && <RoleBadge role={user.role} className="mt-2" />}
             </div>
             <Link to="/admin/profile">
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start hover:bg-accent">
                 <UserIcon className="w-4 h-4 mr-2" />
                 View Profile
               </Button>
