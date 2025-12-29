@@ -26,8 +26,9 @@ import {
 } from '@/components/ui/dialog';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, X, Upload, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Upload, Trash2, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const blogSchema = z.object({
@@ -42,19 +43,14 @@ const blogSchema = z.object({
 
 type BlogFormData = z.infer<typeof blogSchema>;
 
+const VALID_CATEGORIES = ['Technology', 'Marketing', 'Business', 'Product Updates', 'Tutorials', 'Case Studies'];
+const EMPTY_QUILL_CONTENT = '<p><br></p>';
+
 export default function CreateBlog() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [showAIDialog, setShowAIDialog] = useState(false);
-  const [aiIdea, setAiIdea] = useState('');
-  const [aiDetails, setAiDetails] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
+  
+  // Form state
   const {
     register,
     handleSubmit,
@@ -69,25 +65,54 @@ export default function CreateBlog() {
     }
   });
 
+  // Watched values
   const content = watch('content');
   const watchSummary = watch('summary');
   const watchImage = watch('image');
+  const watchTitle = watch('title');
+  const watchCategory = watch('category');
+  const watchAuthor = watch('author');
 
-  // Auto-save draft to localStorage
+  // Component state
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Blog idea state
+  const [blogIdea, setBlogIdea] = useState('');
+  const [blogAbout, setBlogAbout] = useState('');
+  const [audience, setAudience] = useState('');
+  const [isCompanySpecific, setIsCompanySpecific] = useState(false);
+  
+  // AI dialog state
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiIdea, setAiIdea] = useState('');
+  const [aiDetails, setAiDetails] = useState('');
+  
+  // Regenerate dialog state
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+  const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
+  const [regeneratePrompt, setRegeneratePrompt] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // Auto-save draft
   useEffect(() => {
     const draft = {
-      title: watch('title') || '',
+      title: watchTitle || '',
       summary: watchSummary || '',
       content: content || '',
-      category: watch('category') || '',
-      author: watch('author') || '',
+      category: watchCategory || '',
+      author: watchAuthor || '',
       tags,
       image: watchImage || ''
     };
     if (draft.title || draft.content) {
       localStorage.setItem('blog-draft', JSON.stringify(draft));
     }
-  }, [watch, content, watchSummary, watchImage, tags]);
+  }, [watchTitle, watchSummary, content, watchCategory, watchAuthor, tags, watchImage]);
 
   // Load draft on mount
   useEffect(() => {
@@ -108,11 +133,159 @@ export default function CreateBlog() {
           }
         }
       } catch (e) {
-        // Ignore
+        // Ignore parse errors
       }
     }
   }, [setValue]);
 
+  // Helper: Build webhook payload (only include non-empty fields)
+  const buildWebhookPayload = () => {
+    const payload: Record<string, any> = {
+      blogIdea: blogIdea || '',
+      blogAbout: blogAbout || '',
+      audience: audience || '',
+      isCompanySpecific: isCompanySpecific || false,
+    };
+
+    if (watchTitle?.trim()) payload.title = watchTitle;
+    if (watchSummary?.trim()) payload.summary = watchSummary;
+    if (content?.trim() && content !== EMPTY_QUILL_CONTENT) payload.content = content;
+    if (watchCategory?.trim()) payload.category = watchCategory;
+    if (tags.length > 0) payload.tags = tags.join(', ');
+    if (watchImage?.trim()) payload.image = watchImage;
+    if (watchAuthor?.trim()) payload.author = watchAuthor;
+
+    return payload;
+  };
+
+  // Generate content from blog idea via n8n webhook
+  const handleGenerateFromBlogIdea = async () => {
+    if (!blogIdea.trim() && !blogAbout.trim()) {
+      toast.error('Please enter a blog idea or what it\'s about');
+      return;
+    }
+
+    const webhookUrl = (import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined) || 
+      'http://54.88.119.163:5679/webhook/http://localhost:5000/api/blogs';
+
+    try {
+      setIsGenerating(true);
+      const currentFormData = buildWebhookPayload();
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(currentFormData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Get response as text first to handle potential JSON parsing issues
+      const responseText = await response.text();
+      console.log('Raw n8n Response (text):', responseText);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('Parsed n8n Response:', result);
+        console.log('Response keys:', Object.keys(result));
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error(`Invalid JSON response from webhook: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
+
+      // IMPORTANT: NO STATUS CHECKS - n8n returns data directly
+      // Expected format: { Title, Content, Summary, Tags } (no wrapper, no status field)
+      
+      // Handle n8n response format - direct response with capitalized fields
+      // n8n returns: { Title, Content, Summary, Tags } directly
+      // Support various response formats (direct, wrapped, or array)
+      let data = result;
+      
+      // Handle array responses (n8n sometimes returns arrays)
+      if (Array.isArray(result) && result.length > 0) {
+        data = result[0].json || result[0];
+      } 
+      // Handle wrapped responses (if any)
+      else if (result.data) {
+        data = result.data;
+      } else if (result.json) {
+        data = result.json;
+      }
+      // Otherwise use result directly (most common case)
+      
+      console.log('Extracted data:', data);
+      
+      // Extract fields - handle both capitalized and lowercase field names
+      const Title = data?.title || data?.Title;
+      const Content = data?.contentHtml || data?.Content;
+      const Summary = data?.summary || data?.Summary;
+      const Tags = data?.tags || data?.Tags;
+      const Category = data?.category || data?.Category;
+      const Author = data?.author || data?.Author;
+      const Image = data?.image || data?.Image;
+
+      // Validate that we received at least title or content
+      if (!Title && !Content) {
+        console.error('Invalid response structure. Full result:', result);
+        console.error('Extracted data:', data);
+        throw new Error(`Response missing required fields (Title/Content). Received keys: ${Object.keys(data || {}).join(', ')}`);
+      }
+
+      if (Title) {
+        setValue('title', Title.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Content) {
+        setValue('content', Content, { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Summary) {
+        setValue('summary', Summary.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Tags) {
+        // Tags comes as a comma-separated string, convert to array
+        const tagArray = typeof Tags === 'string' 
+          ? Tags.split(',').map((t: string) => t.trim()).filter((t: string) => t)
+          : Array.isArray(Tags) 
+            ? Tags 
+            : [];
+        if (tagArray.length > 0) {
+          setTags(tagArray);
+        }
+      }
+
+      if (Category) {
+        setValue('category', Category.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Author) {
+        setValue('author', Author.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Image) {
+        setValue('image', Image.trim(), { shouldValidate: true, shouldDirty: true });
+        setImagePreview(Image.trim());
+      }
+
+      toast.success('Blog content generated successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate content. Please try again.');
+      console.error('Error generating blog content:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Tag handlers
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
     if (trimmed && !tags.includes(trimmed)) {
@@ -125,6 +298,7 @@ export default function CreateBlog() {
     setTags(tags.filter((_, i) => i !== index));
   };
 
+  // Image handlers
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -157,6 +331,7 @@ export default function CreateBlog() {
     setImagePreview(null);
   };
 
+  // AI generation
   const handleGenerateAI = async () => {
     if (!aiIdea.trim()) {
       toast.error('Please provide a blog idea');
@@ -173,9 +348,7 @@ export default function CreateBlog() {
       if (generated.title) setValue('title', generated.title);
       if (generated.summary) setValue('summary', generated.summary);
       if (generated.content) setValue('content', generated.content);
-      if (generated.tags && generated.tags.length > 0) {
-        setTags(generated.tags);
-      }
+      if (generated.tags?.length) setTags(generated.tags);
       
       setShowAIDialog(false);
       setAiIdea('');
@@ -188,24 +361,92 @@ export default function CreateBlog() {
     }
   };
 
-  const handleSaveDraft = () => {
-    const draft = {
-      title: watch('title') || '',
-      summary: watchSummary || '',
-      content: content || '',
-      category: watch('category') || '',
-      author: watch('author') || '',
-      tags,
-      image: watchImage || ''
-    };
-    localStorage.setItem('blog-draft', JSON.stringify(draft));
-    toast.success('Draft saved locally');
+  // Field regeneration
+  const handleRegenerateField = (field: string) => {
+    setRegeneratingField(field);
+    setRegeneratePrompt('');
+    setShowRegenerateDialog(true);
   };
 
+  const handleConfirmRegenerate = async () => {
+    if (!regeneratingField || !regeneratePrompt.trim()) {
+      toast.error('Please enter a prompt for regeneration');
+      return;
+    }
+
+    try {
+      setIsRegenerating(true);
+      
+      const context = {
+        title: watchTitle || '',
+        summary: watchSummary || '',
+        content: content || '',
+        category: watchCategory || '',
+        tags: tags,
+        author: watchAuthor || ''
+      };
+
+      const fieldValueMap: Record<string, string> = {
+        title: watchTitle || '',
+        summary: watchSummary || '',
+        content: content || '',
+        category: watchCategory || '',
+        tags: tags.join(', '),
+        author: watchAuthor || '',
+        image: watchImage || ''
+      };
+
+      const result = await aiService.regenerateField({
+        field: regeneratingField as any,
+        prompt: regeneratePrompt,
+        currentValue: fieldValueMap[regeneratingField] || '',
+        context
+      });
+
+      // Update the appropriate field
+      if (regeneratingField === 'tags') {
+        const tagArray = Array.isArray(result.value) 
+          ? result.value 
+          : typeof result.value === 'string' 
+            ? result.value.split(',').map(t => t.trim()).filter(t => t)
+            : [];
+        setTags(tagArray);
+      } else if (regeneratingField === 'image') {
+        setValue('image', result.value);
+        setImagePreview(result.value);
+      } else {
+        setValue(regeneratingField as keyof BlogFormData, result.value);
+      }
+
+      setShowRegenerateDialog(false);
+      setRegeneratingField(null);
+      setRegeneratePrompt('');
+      toast.success(`${regeneratingField.charAt(0).toUpperCase() + regeneratingField.slice(1)} regenerated successfully!`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to regenerate field');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const getFieldLabel = (field: string) => {
+    const labels: Record<string, string> = {
+      title: 'Title',
+      summary: 'Summary',
+      content: 'Content',
+      category: 'Category',
+      tags: 'Tags',
+      author: 'Author',
+      image: 'Image URL'
+    };
+    return labels[field] || field;
+  };
+
+  // Form submission
   const onSubmit = async (data: BlogFormData) => {
     try {
       setLoading(true);
-      localStorage.removeItem('blog-draft'); // Clear draft on successful submit
+      localStorage.removeItem('blog-draft');
       
       await blogService.createBlog({
         ...data,
@@ -220,6 +461,21 @@ export default function CreateBlog() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Draft save
+  const handleSaveDraft = () => {
+    const draft = {
+      title: watchTitle || '',
+      summary: watchSummary || '',
+      content: content || '',
+      category: watchCategory || '',
+      author: watchAuthor || '',
+      tags,
+      image: watchImage || ''
+    };
+    localStorage.setItem('blog-draft', JSON.stringify(draft));
+    toast.success('Draft saved locally');
   };
 
   return (
@@ -237,6 +493,74 @@ export default function CreateBlog() {
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
+          {/* Blog Idea Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Blog Idea</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="blogIdea">Enter your blog idea (optional)</Label>
+                <Textarea
+                  id="blogIdea"
+                  rows={3}
+                  placeholder="Describe your blog idea..."
+                  value={blogIdea}
+                  onChange={(e) => setBlogIdea(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="blogAbout">What it's about (optional)</Label>
+                <Textarea
+                  id="blogAbout"
+                  rows={3}
+                  placeholder="What is this blog about..."
+                  value={blogAbout}
+                  onChange={(e) => setBlogAbout(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="audience">Audience (optional)</Label>
+                <Input
+                  id="audience"
+                  placeholder="Who is your target audience?"
+                  value={audience}
+                  onChange={(e) => setAudience(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="isCompanySpecific" className="cursor-pointer">
+                  Is it company specific?
+                </Label>
+                <Switch
+                  id="isCompanySpecific"
+                  checked={isCompanySpecific}
+                  onCheckedChange={setIsCompanySpecific}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={handleGenerateFromBlogIdea}
+                  disabled={isGenerating || (!blogIdea.trim() && !blogAbout.trim())}
+                  className="gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -244,7 +568,21 @@ export default function CreateBlog() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="title">Title *</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="title">Title *</Label>
+                  {watchTitle?.trim() && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRegenerateField('title')}
+                      className="h-7 text-xs"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Regenerate
+                    </Button>
+                  )}
+                </div>
                 <Input
                   id="title"
                   placeholder="Enter blog title..."
@@ -256,7 +594,21 @@ export default function CreateBlog() {
               </div>
 
               <div>
-                <Label htmlFor="summary">Summary</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="summary">Summary</Label>
+                  {watchSummary?.trim() && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRegenerateField('summary')}
+                      className="h-7 text-xs"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Regenerate
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   id="summary"
                   rows={3}
@@ -274,17 +626,17 @@ export default function CreateBlog() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="category">Category</Label>
-                  <Select onValueChange={(value) => setValue('category', value)}>
+                  <Select 
+                    value={watchCategory || ''} 
+                    onValueChange={(value) => setValue('category', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Technology">Technology</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="Business">Business</SelectItem>
-                      <SelectItem value="Product Updates">Product Updates</SelectItem>
-                      <SelectItem value="Tutorials">Tutorials</SelectItem>
-                      <SelectItem value="Case Studies">Case Studies</SelectItem>
+                      {VALID_CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -300,7 +652,21 @@ export default function CreateBlog() {
               </div>
 
               <div>
-                <Label htmlFor="tags">Tags</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="tags">Tags</Label>
+                  {tags.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRegenerateField('tags')}
+                      className="h-7 text-xs"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Regenerate
+                    </Button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input
@@ -344,15 +710,28 @@ export default function CreateBlog() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Content *</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAIDialog(true)}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate with AI
-                </Button>
+                <div className="flex gap-2">
+                  {content?.trim() && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRegenerateField('content')}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Regenerate
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAIDialog(true)}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate with AI
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -374,7 +753,21 @@ export default function CreateBlog() {
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="image">Image URL</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="image">Image URL</Label>
+                    {watchImage?.trim() && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRegenerateField('image')}
+                        className="h-7 text-xs"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Regenerate
+                      </Button>
+                    )}
+                  </div>
                   <Input
                     id="image"
                     placeholder="https://example.com/your-image.jpg"
@@ -388,42 +781,42 @@ export default function CreateBlog() {
                   </p>
                 </div>
 
-              {!imagePreview && !watchImage ? (
+                {!imagePreview && !watchImage ? (
                   <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    id="image-upload"
-                    onChange={handleImageUpload}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="image-upload"
+                      onChange={handleImageUpload}
                       disabled={uploading}
-                  />
-                  <label htmlFor="image-upload" className="cursor-pointer">
+                    />
+                    <label htmlFor="image-upload" className="cursor-pointer">
                       <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-lg font-medium mb-1">
                         {uploading ? 'Uploading image...' : 'Upload an image'}
                       </p>
                       <p className="text-sm text-muted-foreground">PNG, JPG, GIF up to 10MB</p>
-                  </label>
-                </div>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={imagePreview || watchImage || ''}
-                    alt="Preview"
-                    className="w-full rounded-lg"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2"
-                    onClick={handleRemoveImage}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <img
+                      src={imagePreview || watchImage || ''}
+                      alt="Preview"
+                      className="w-full rounded-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={handleRemoveImage}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -485,7 +878,46 @@ export default function CreateBlog() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Regenerate Field Dialog */}
+      <Dialog open={showRegenerateDialog} onOpenChange={setShowRegenerateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Regenerate {regeneratingField && getFieldLabel(regeneratingField)}</DialogTitle>
+            <DialogDescription>
+              Enter a prompt to regenerate the {regeneratingField && getFieldLabel(regeneratingField).toLowerCase()} according to your requirements
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="regeneratePrompt">Prompt</Label>
+              <Textarea
+                id="regeneratePrompt"
+                rows={4}
+                placeholder="Describe how you want to regenerate this field..."
+                value={regeneratePrompt}
+                onChange={(e) => setRegeneratePrompt(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowRegenerateDialog(false);
+                setRegeneratingField(null);
+                setRegeneratePrompt('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmRegenerate} disabled={isRegenerating || !regeneratePrompt.trim()}>
+              {isRegenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Regenerate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

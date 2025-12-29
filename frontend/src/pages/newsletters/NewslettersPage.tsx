@@ -168,7 +168,7 @@ export default function NewslettersPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 border rounded-md"
+              className="px-5 py-2 bg-background border border-border text-foreground rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
             >
               <option value="">All Status</option>
               <option value="PENDING">Pending</option>

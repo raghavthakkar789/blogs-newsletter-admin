@@ -249,6 +249,8 @@ export const aiService = {
   generateBlogContent: async (data: {
     idea: string;
     details?: string;
+    audience?: string;
+    isCompanySpecific?: boolean;
   }): Promise<{
     title: string;
     content: string;
@@ -257,8 +259,29 @@ export const aiService = {
   }> => {
     const response = await api.post('/generate-content', {
       blogIdea: data.idea,
-      blogAbout: data.details || ''
+      blogAbout: data.details || '',
+      audience: data.audience || '',
+      isCompanySpecific: data.isCompanySpecific || false
     });
+    return response.data;
+  },
+  regenerateField: async (data: {
+    field: 'title' | 'summary' | 'content' | 'category' | 'tags' | 'author' | 'image';
+    prompt: string;
+    currentValue?: string;
+    context?: {
+      title?: string;
+      summary?: string;
+      content?: string;
+      category?: string;
+      tags?: string[];
+      author?: string;
+    };
+  }): Promise<{
+    field: string;
+    value: string;
+  }> => {
+    const response = await api.post('/generate-content/regenerate', data);
     return response.data;
   },
 };
