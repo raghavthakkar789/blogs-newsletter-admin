@@ -95,42 +95,33 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     const search = req.query.search as string | undefined;
     
     const where: any = {};
+    const andConditions: any[] = [];
     
-    // Access control: MARKETING_MANAGER sees own + approved, ADMIN sees all
-    if (req.user!.role === 'MARKETING_MANAGER') {
-      where.OR = [
-        { createdById: req.user!.id },
-        { status: 'APPROVED' }
-      ];
-    }
-    
-    if (status) {
-      if (req.user!.role === 'MARKETING_MANAGER') {
-        // Marketing managers can filter by status only for their own blogs
-        where.AND = [
-          { createdById: req.user!.id },
-          { status }
-        ];
-      } else {
-        where.status = status;
-      }
+    // Both ADMIN and MARKETING_MANAGER can see all blogs
+    // Apply filters normally
+    if (status && status !== 'all') {
+      andConditions.push({ status });
     }
     
     if (createdById) {
-      if (req.user!.role === 'MARKETING_MANAGER' && createdById !== req.user!.id) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-      where.createdById = createdById;
+      andConditions.push({ createdById });
     }
     
     if (search) {
-      where.OR = [
-        ...(where.OR || []),
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-        { summary: { contains: search, mode: 'insensitive' } }
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+          { summary: { contains: search, mode: 'insensitive' } }
+        ]
+      });
     }
+    
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
+    }
+    
+    console.log('Blogs query where clause:', JSON.stringify(where, null, 2));
     
     const [blogs, total] = await Promise.all([
       prisma.blog.findMany({
@@ -154,7 +145,7 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
         },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { updatedAt: 'desc' } // Sort by updatedAt to show most recently edited first
       }),
       prisma.blog.count({ where })
     ]);
@@ -166,6 +157,8 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (error: any) {
+    console.error('Error fetching blogs:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message || 'Internal server error' });
   }
 });
@@ -258,12 +251,48 @@ router.patch('/:id', logActivity('UPDATE_BLOG', 'Blog'), async (req: AuthRequest
     
     const data = blogSchema.partial().parse(req.body);
     
+    // Track changes for edit history
+    const changes: string[] = [];
+    const fieldsToCheck = ['title', 'content', 'summary', 'category', 'author', 'image', 'tags'];
+    
+    fieldsToCheck.forEach(field => {
+      if (field === 'tags') {
+        const oldTags = JSON.stringify(blog.tags || []);
+        const newTags = JSON.stringify(data.tags || []);
+        if (oldTags !== newTags) {
+          changes.push(field);
+        }
+      } else if (data[field as keyof typeof data] !== undefined && 
+                 data[field as keyof typeof data] !== blog[field as keyof typeof blog]) {
+        changes.push(field);
+      }
+    });
+    
+    // Build edit history entry
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+    const editEntry = {
+      userId: req.user!.id,
+      userName,
+      editedAt: new Date().toISOString(),
+      changes
+    };
+    
+    // Get existing edit history
+    const existingHistory = (blog.editHistory as any[]) || [];
+    const updatedHistory = [...existingHistory, editEntry];
+    
+    // Prepare update data
+    const updateData: any = {
+      ...data,
+      image: data.image === '' ? null : data.image,
+      lastEditedBy: userName,
+      lastEditedAt: new Date(),
+      editHistory: updatedHistory
+    };
+    
     const updatedBlog = await prisma.blog.update({
       where: { id: req.params.id },
-      data: {
-        ...data,
-        image: data.image === '' ? null : data.image
-      },
+      data: updateData,
       include: {
         createdBy: {
           select: {
@@ -405,4 +434,3 @@ router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_BLOG
 });
 
 export default router;
-

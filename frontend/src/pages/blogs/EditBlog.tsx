@@ -21,8 +21,9 @@ import {
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, X, Upload, Trash2, Loader2, Clock, CheckCircle, XCircle, Ban, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, X, Upload, Trash2, Loader2, Clock, CheckCircle, XCircle, Ban, AlertCircle, History } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { format } from 'date-fns';
 
 const blogSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
@@ -180,11 +181,8 @@ export default function EditBlog() {
     }
   };
 
-  // Permission check
-  const canEdit = user?.role === 'ADMIN' || 
-    (user?.role === 'MARKETING_MANAGER' && blog && 
-     (blog.status === 'PENDING' || blog.status === 'REJECTED') && 
-     blog.createdById === user.id);
+  // Both ADMIN and MARKETING_MANAGER can edit all blogs
+  const canEdit = user?.role === 'ADMIN' || user?.role === 'MARKETING_MANAGER';
 
   if (isLoading) {
     return (
@@ -227,7 +225,12 @@ export default function EditBlog() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Edit Blog</h1>
-          <p className="text-muted-foreground mt-1">Update blog post details</p>
+          <p className="text-muted-foreground mt-1">
+            {blog.lastEditedBy 
+              ? `Last edited by ${blog.lastEditedBy} on ${new Date(blog.lastEditedAt || blog.updatedAt).toLocaleDateString()}`
+              : `Created by ${blog.createdBy?.firstName} ${blog.createdBy?.lastName} on ${new Date(blog.createdAt).toLocaleDateString()}`
+            }
+          </p>
         </div>
         <Button variant="outline" onClick={() => navigate('/admin/blogs')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -420,6 +423,40 @@ export default function EditBlog() {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit History */}
+          {blog.editHistory && blog.editHistory.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Edit History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {blog.editHistory.slice().reverse().map((edit: any, index: number) => (
+                    <div key={index} className="border-l-2 border-l-primary pl-4 py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{edit.userName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(edit.editedAt), 'MMM dd, yyyy HH:mm')}
+                        </span>
+                      </div>
+                      {edit.changes && edit.changes.length > 0 && (
+                        <div className="mt-1">
+                          <span className="text-xs text-muted-foreground">Changed: </span>
+                          <span className="text-xs">
+                            {edit.changes.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between">

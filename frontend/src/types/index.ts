@@ -31,6 +31,14 @@ export interface Blog {
   status: ContentStatus;
   createdById: string;
   approvedById?: string | null;
+  lastEditedBy?: string | null;
+  lastEditedAt?: string | null;
+  editHistory?: Array<{
+    userId: string;
+    userName: string;
+    editedAt: string;
+    changes: string[];
+  }> | null;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
@@ -58,6 +66,14 @@ export interface Newsletter {
   status: ContentStatus;
   createdById: string;
   approvedById?: string | null;
+  lastEditedBy?: string | null;
+  lastEditedAt?: string | null;
+  editHistory?: Array<{
+    userId: string;
+    userName: string;
+    editedAt: string;
+    changes: string[];
+  }> | null;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;

@@ -11,9 +11,11 @@ import Dashboard from './pages/Dashboard';
 import BlogsPage from './pages/blogs/BlogsPage';
 import CreateBlog from './pages/blogs/CreateBlog';
 import EditBlog from './pages/blogs/EditBlog';
+import ViewBlog from './pages/blogs/ViewBlog';
 import NewslettersPage from './pages/newsletters/NewslettersPage';
 import CreateNewsletter from './pages/newsletters/CreateNewsletter';
 import EditNewsletter from './pages/newsletters/EditNewsletter';
+import ViewNewsletter from './pages/newsletters/ViewNewsletter';
 import UsersPage from './pages/users/UsersPage';
 import CreateUser from './pages/users/CreateUser';
 import EditUser from './pages/users/EditUser';
@@ -40,11 +42,13 @@ function App() {
           <Route path="blogs" element={<BlogsPage />} />
           <Route path="blogs/create" element={<CreateBlog />} />
           <Route path="blogs/:id/edit" element={<EditBlog />} />
+          <Route path="blogs/:id/view" element={<ViewBlog />} />
 
           {/* Newsletters */}
           <Route path="newsletters" element={<NewslettersPage />} />
           <Route path="newsletters/create" element={<CreateNewsletter />} />
           <Route path="newsletters/:id/edit" element={<EditNewsletter />} />
+          <Route path="newsletters/:id/view" element={<ViewNewsletter />} />
 
           {/* Users - Admin Only */}
           <Route

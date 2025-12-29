@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, CheckCircle, XCircle, Ban, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { format } from 'date-fns';
 
 const newsletterSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
@@ -148,13 +149,18 @@ export default function EditNewsletter() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-foreground">Edit Newsletter</h1>
-            <StatusBadge status={newsletter.status} />
-          </div>
-          <p className="text-muted-foreground mt-1">Update newsletter details</p>
-        </div>
+          <div className="flex-1">
+           <div className="flex items-center gap-3">
+             <h1 className="text-3xl font-bold text-foreground">Edit Newsletter</h1>
+             <StatusBadge status={newsletter.status} />
+           </div>
+           <p className="text-muted-foreground mt-1">
+             {newsletter.lastEditedBy 
+               ? `Last edited by ${newsletter.lastEditedBy} on ${new Date(newsletter.lastEditedAt || newsletter.updatedAt).toLocaleDateString()}`
+               : `Created by ${newsletter.createdBy?.firstName} ${newsletter.createdBy?.lastName} on ${new Date(newsletter.createdAt).toLocaleDateString()}`
+             }
+           </p>
+         </div>
         {user?.role === 'ADMIN' && (
           <div className="flex gap-2">
             {newsletter.status === 'PENDING' && (
@@ -282,6 +288,37 @@ export default function EditNewsletter() {
                 </div>
               </div>
             </div>
+
+            {/* Edit History */}
+            {newsletter.editHistory && newsletter.editHistory.length > 0 && (
+              <div className="space-y-2">
+                <Label>Edit History</Label>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      {newsletter.editHistory.slice().reverse().map((edit: any, index: number) => (
+                        <div key={index} className="border-l-2 border-l-primary pl-4 py-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{edit.userName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(edit.editedAt), 'MMM dd, yyyy HH:mm')}
+                            </span>
+                          </div>
+                          {edit.changes && edit.changes.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-xs text-muted-foreground">Changed: </span>
+                              <span className="text-xs">
+                                {edit.changes.join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             <div className="flex justify-end gap-4">
               <Button

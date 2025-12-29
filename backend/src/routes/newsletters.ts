@@ -94,41 +94,33 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     const search = req.query.search as string | undefined;
     
     const where: any = {};
+    const andConditions: any[] = [];
     
-    // Access control: MARKETING_MANAGER sees own + approved, ADMIN sees all
-    if (req.user!.role === 'MARKETING_MANAGER') {
-      where.OR = [
-        { createdById: req.user!.id },
-        { status: 'APPROVED' }
-      ];
-    }
-    
-    if (status) {
-      if (req.user!.role === 'MARKETING_MANAGER') {
-        where.AND = [
-          { createdById: req.user!.id },
-          { status }
-        ];
-      } else {
-        where.status = status;
-      }
+    // Both ADMIN and MARKETING_MANAGER can see all newsletters
+    // Apply filters normally
+    if (status && status !== 'all') {
+      andConditions.push({ status });
     }
     
     if (createdById) {
-      if (req.user!.role === 'MARKETING_MANAGER' && createdById !== req.user!.id) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-      where.createdById = createdById;
+      andConditions.push({ createdById });
     }
     
     if (search) {
-      where.OR = [
-        ...(where.OR || []),
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-        { summary: { contains: search, mode: 'insensitive' } }
-      ];
+      andConditions.push({
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+          { summary: { contains: search, mode: 'insensitive' } }
+        ]
+      });
     }
+    
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
+    }
+    
+    console.log('Newsletters query where clause:', JSON.stringify(where, null, 2));
     
     const [newsletters, total] = await Promise.all([
       prisma.newsletter.findMany({
@@ -152,7 +144,7 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
         },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { updatedAt: 'desc' }
       }),
       prisma.newsletter.count({ where })
     ]);
@@ -164,6 +156,8 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
       totalPages: Math.ceil(total / limit)
     });
   } catch (error: any) {
+    console.error('Error fetching newsletters:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message || 'Internal server error' });
   }
 });
@@ -256,12 +250,48 @@ router.patch('/:id', logActivity('UPDATE_NEWSLETTER', 'Newsletter'), async (req:
     
     const data = newsletterSchema.partial().parse(req.body);
     
+    // Track changes for edit history
+    const changes: string[] = [];
+    const fieldsToCheck = ['title', 'content', 'summary', 'category', 'image', 'tags'];
+    
+    fieldsToCheck.forEach(field => {
+      if (field === 'tags') {
+        const oldTags = JSON.stringify(newsletter.tags || []);
+        const newTags = JSON.stringify(data.tags || []);
+        if (oldTags !== newTags) {
+          changes.push(field);
+        }
+      } else if (data[field as keyof typeof data] !== undefined && 
+                 data[field as keyof typeof data] !== newsletter[field as keyof typeof newsletter]) {
+        changes.push(field);
+      }
+    });
+    
+    // Build edit history entry
+    const userName = `${req.user!.firstName} ${req.user!.lastName}`;
+    const editEntry = {
+      userId: req.user!.id,
+      userName,
+      editedAt: new Date().toISOString(),
+      changes
+    };
+    
+    // Get existing edit history
+    const existingHistory = (newsletter.editHistory as any[]) || [];
+    const updatedHistory = [...existingHistory, editEntry];
+    
+    // Prepare update data
+    const updateData: any = {
+      ...data,
+      image: data.image === '' ? null : data.image,
+      lastEditedBy: userName,
+      lastEditedAt: new Date(),
+      editHistory: updatedHistory
+    };
+    
     const updatedNewsletter = await prisma.newsletter.update({
       where: { id: req.params.id },
-      data: {
-        ...data,
-        image: data.image === '' ? null : data.image
-      },
+      data: updateData,
       include: {
         createdBy: {
           select: {
@@ -326,7 +356,6 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER
     
     const updateData: any = {
       status,
-      // keep original approver for DISABLED content so history is preserved
       approvedById: status === 'APPROVED' ? req.user!.id : newsletter.approvedById
     };
     
@@ -403,4 +432,3 @@ router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_NEWS
 });
 
 export default router;
-

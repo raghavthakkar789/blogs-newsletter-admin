@@ -6,26 +6,13 @@ type AccessUser = {
 };
 
 export const canAccessBlog = (user: AccessUser, blog: Blog): boolean => {
-  if (user.role === 'ADMIN') return true;
-  
-  if (user.role === 'MARKETING_MANAGER') {
-    return blog.createdById === user.id || blog.status === 'APPROVED';
-  }
-  
-  return false;
+  // Both ADMIN and MARKETING_MANAGER can access all blogs
+  return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 
 export const canEditBlog = (user: AccessUser, blog: Blog): boolean => {
-  if (user.role === 'ADMIN') return true;
-  
-  if (user.role === 'MARKETING_MANAGER') {
-    return (
-      blog.createdById === user.id &&
-      ['PENDING', 'REJECTED'].includes(blog.status)
-    );
-  }
-  
-  return false;
+  // Both ADMIN and MARKETING_MANAGER can edit all blogs
+  return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 
 export const canDeleteBlog = (user: AccessUser, blog: Blog): boolean => {
@@ -37,26 +24,13 @@ export const canApproveContent = (user: AccessUser): boolean => {
 };
 
 export const canAccessNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
-  if (user.role === 'ADMIN') return true;
-  
-  if (user.role === 'MARKETING_MANAGER') {
-    return newsletter.createdById === user.id || newsletter.status === 'APPROVED';
-  }
-  
-  return false;
+  // Both ADMIN and MARKETING_MANAGER can access all newsletters
+  return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 
 export const canEditNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
-  if (user.role === 'ADMIN') return true;
-  
-  if (user.role === 'MARKETING_MANAGER') {
-    return (
-      newsletter.createdById === user.id &&
-      ['PENDING', 'REJECTED'].includes(newsletter.status)
-    );
-  }
-  
-  return false;
+  // Both ADMIN and MARKETING_MANAGER can edit all newsletters
+  return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 
 export const canDeleteNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {

@@ -63,6 +63,10 @@ model Blog {
   approvedBy   User?         @relation("BlogApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedById String?
   
+  lastEditedBy String?
+  lastEditedAt DateTime?
+  editHistory   Json?        // Stores array of {userId, userName, editedAt, changes}
+  
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   publishedAt  DateTime?
@@ -87,6 +91,10 @@ model Newsletter {
   
   approvedBy   User?         @relation("NewsletterApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedById String?
+  
+  lastEditedBy String?
+  lastEditedAt DateTime?
+  editHistory   Json?        // Stores array of {userId, userName, editedAt, changes}
   
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

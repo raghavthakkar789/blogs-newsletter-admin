@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { newsletterService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { Plus, Search, CheckCircle, XCircle, Ban, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Ban, Trash2, Edit, Eye } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -17,24 +17,34 @@ export default function NewslettersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['newsletters', page, search, statusFilter, user?.id],
-    queryFn: () =>
-      newsletterService.getNewsletters({
+    queryFn: async () => {
+      try {
+        const result = await       newsletterService.getNewsletters({
         page,
         limit: 20,
         search: search || undefined,
-        status: statusFilter || undefined,
-        createdById: user?.role === 'MARKETING_MANAGER' ? user.id : undefined
-      })
+        status: statusFilter !== 'all' ? statusFilter : undefined
+      });
+        console.log('Newsletters API Response:', result);
+        return result;
+      } catch (err) {
+        console.error('Error fetching newsletters:', err);
+        throw err;
+      }
+    },
+    retry: 1
   });
 
   const newsletters = data?.newsletters || [];
   const totalPages = data?.totalPages || 0;
   const hasSelection = selectedIds.length > 0;
+  
+  console.log('NewslettersPage - newsletters:', newsletters, 'isLoading:', isLoading, 'error:', error);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => newsletterService.updateNewsletterStatus(id, 'APPROVED'),
@@ -162,25 +172,30 @@ export default function NewslettersPage() {
                 className="pl-10"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-5 py-2 bg-background border border-border text-foreground rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
-            >
-              <option value="">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="DISABLED">Disabled</option>
-            </select>
+             <select
+               value={statusFilter}
+               onChange={(e) => {
+                 setStatusFilter(e.target.value);
+                 setPage(1);
+               }}
+               className="px-5 py-2 bg-background border border-border text-foreground rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
+             >
+               <option value="all">All Status</option>
+               <option value="PENDING">Pending</option>
+               <option value="APPROVED">Approved</option>
+               <option value="REJECTED">Rejected</option>
+               <option value="DISABLED">Disabled</option>
+             </select>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div>Loading...</div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-destructive mb-4">Error loading newsletters: {error instanceof Error ? error.message : 'Unknown error'}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
           ) : newsletters.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No newsletters found</div>
           ) : (
@@ -239,7 +254,7 @@ export default function NewslettersPage() {
                   >
                     <div className="flex items-center gap-3">
                       <Link
-                        to={`/admin/newsletters/${newsletter.id}/edit`}
+                        to={`/admin/newsletters/${newsletter.id}/view`}
                         className="font-semibold text-lg hover:text-primary"
                       >
                         {newsletter.title}
@@ -249,67 +264,94 @@ export default function NewslettersPage() {
                     <p className="text-sm text-muted-foreground mt-1">
                       {newsletter.summary || newsletter.content.substring(0, 100)}...
                     </p>
-                    <p className="text-xs text-muted-foreground/70 mt-2">
-                      Created by {newsletter.createdBy?.firstName} {newsletter.createdBy?.lastName} •{' '}
-                      {format(new Date(newsletter.createdAt), 'MMM d, yyyy')}
-                    </p>
+                     <div className="text-xs text-muted-foreground/70 mt-2 space-y-1">
+                       <p>
+                         Created by {newsletter.createdBy?.firstName} {newsletter.createdBy?.lastName} •{' '}
+                         {format(new Date(newsletter.createdAt), 'MMM d, yyyy')}
+                       </p>
+                       {newsletter.lastEditedBy && (
+                         <p className="text-orange-600">
+                           Last edited by {newsletter.lastEditedBy} on{' '}
+                           {format(new Date(newsletter.lastEditedAt || newsletter.updatedAt), 'MMM d, yyyy')}
+                         </p>
+                       )}
+                     </div>
                   </div>
 
-                  {user?.role === 'ADMIN' && (
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => navigate(`/admin/newsletters/${newsletter.id}/edit`)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      {newsletter.status === 'PENDING' && (
-                        <>
+                  <div className="flex items-center gap-2 ml-4">
+                    {/* View and Edit buttons - available for all authenticated users */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigate(`/admin/newsletters/${newsletter.id}/view`)}
+                      title="View Newsletter"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigate(`/admin/newsletters/${newsletter.id}/edit`)}
+                      title="Edit Newsletter"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    
+                    {/* Status management buttons - ADMIN only */}
+                    {user?.role === 'ADMIN' && (
+                      <>
+                        {newsletter.status === 'PENDING' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => approveMutation.mutate(newsletter.id)}
+                              title="Approve Newsletter"
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => rejectMutation.mutate(newsletter.id)}
+                              title="Reject Newsletter"
+                            >
+                              <XCircle className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </>
+                        )}
+                        {newsletter.status === 'APPROVED' && (
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => approveMutation.mutate(newsletter.id)}
+                            onClick={() => handleDisable(newsletter.id)}
+                            title="Disable Newsletter"
+                          >
+                            <Ban className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                        {newsletter.status === 'DISABLED' && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEnable(newsletter.id)}
+                            title="Enable Newsletter"
                           >
                             <CheckCircle className="w-4 h-4 text-green-600" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => rejectMutation.mutate(newsletter.id)}
-                          >
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          </Button>
-                        </>
-                      )}
-                      {newsletter.status === 'APPROVED' && (
+                        )}
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => handleDisable(newsletter.id)}
+                          className="text-destructive"
+                          onClick={() => handleDelete(newsletter.id)}
+                          title="Delete Newsletter"
                         >
-                          <Ban className="w-4 h-4 text-muted-foreground" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                      )}
-                      {newsletter.status === 'DISABLED' && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEnable(newsletter.id)}
-                        >
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => handleDelete(newsletter.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
 

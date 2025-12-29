@@ -41,7 +41,8 @@ import {
   XCircle,
   FileText,
   Clock,
-  Ban
+  Ban,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
@@ -60,21 +61,31 @@ export default function BlogsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['blogs', page, search, statusFilter, user?.id],
-    queryFn: () =>
-      blogService.getBlogs({
-        page,
-        limit: 20,
-        search: search || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        createdById: user?.role === 'MARKETING_MANAGER' ? user.id : undefined
-      })
+    queryFn: async () => {
+      try {
+        const result = await         blogService.getBlogs({
+          page,
+          limit: 20,
+          search: search || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined
+        });
+        console.log('Blogs API Response:', result);
+        return result;
+      } catch (err) {
+        console.error('Error fetching blogs:', err);
+        throw err;
+      }
+    },
+    retry: 1
   });
 
   const blogs = data?.blogs || [];
   const totalPages = data?.totalPages || 0;
   const total = data?.total || 0;
+  
+  console.log('BlogsPage - blogs:', blogs, 'isLoading:', isLoading, 'error:', error);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => blogService.updateBlogStatus(id, 'APPROVED'),
@@ -188,7 +199,7 @@ export default function BlogsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Blogs</h1>
           <p className="text-muted-foreground mt-1">
-            {user?.role === 'ADMIN' ? 'Manage all blog posts' : 'Manage your blog posts'}
+            Manage all blog posts
           </p>
         </div>
         <Button onClick={() => navigate('/admin/blogs/create')}>
@@ -283,6 +294,11 @@ export default function BlogsPage() {
             </Card>
           ))}
         </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">Error loading blogs: {error instanceof Error ? error.message : 'Unknown error'}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
       ) : blogs.length === 0 ? (
         <EmptyState
           icon={FileText}
@@ -346,6 +362,10 @@ export default function BlogsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/admin/blogs/${blog.id}/view`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate(`/admin/blogs/${blog.id}/edit`)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
@@ -387,10 +407,18 @@ export default function BlogsPage() {
                   <p className="text-muted-foreground text-sm line-clamp-3 mb-4">
                     {blog.summary || blog.content.substring(0, 150)}...
                   </p>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                    <span>{blog.category || 'Uncategorized'}</span>
-                    <span>{format(new Date(blog.createdAt), 'MMM dd, yyyy')}</span>
-                  </div>
+                   <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                     <div className="flex items-center justify-between">
+                       <span>{blog.category || 'Uncategorized'}</span>
+                       <span>{format(new Date(blog.createdAt), 'MMM dd, yyyy')}</span>
+                     </div>
+                     {blog.lastEditedBy && (
+                       <div className="text-xs text-orange-600">
+                         Last edited by {blog.lastEditedBy} on{' '}
+                         {format(new Date(blog.lastEditedAt || blog.updatedAt), 'MMM dd, yyyy')}
+                       </div>
+                     )}
+                   </div>
                   {blog.tags && blog.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {blog.tags.slice(0, 3).map(tag => (
@@ -402,6 +430,14 @@ export default function BlogsPage() {
                   )}
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => navigate(`/admin/blogs/${blog.id}/view`)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </Button>
                   <Button
                     variant="outline"
                     className="flex-1"
@@ -495,6 +531,10 @@ export default function BlogsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/blogs/${blog.id}/view`)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/admin/blogs/${blog.id}/edit`)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
