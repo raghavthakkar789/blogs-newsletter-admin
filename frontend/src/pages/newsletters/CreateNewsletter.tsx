@@ -47,6 +47,7 @@ export default function CreateNewsletter() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [newsletterIdea, setNewsletterIdea] = useState('');
   const [newsletterAbout, setNewsletterAbout] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
   const [isCompanySpecific, setIsCompanySpecific] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
   const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
@@ -154,6 +155,28 @@ export default function CreateNewsletter() {
     setImagePreview(null);
   };
 
+  // Helper: Build webhook payload (only include non-empty fields)
+  const buildWebhookPayload = () => {
+    const payload: Record<string, any> = {
+      query: {
+        newsletterIdea: newsletterIdea || '',
+        newsletterAbout: newsletterAbout || '',
+        audience: targetAudience || '',
+        isCompanySpecific: isCompanySpecific || false,
+      }
+    };
+
+    // Include existing form data if available
+    if (watchTitle?.trim()) payload.title = watchTitle;
+    if (watchSummary?.trim()) payload.summary = watchSummary;
+    if (content?.trim()) payload.content = content;
+    if (watchCategory?.trim()) payload.category = watchCategory;
+    if (tags.length > 0) payload.tags = tags.join(', ');
+    if (watchImage?.trim()) payload.image = watchImage;
+
+    return payload;
+  };
+
   const handleGenerateAI = async () => {
     if (!aiIdea.trim()) {
       toast.error('Please provide a newsletter idea');
@@ -185,30 +208,123 @@ export default function CreateNewsletter() {
     }
   };
 
+  // Generate content from newsletter idea via n8n webhook
   const handleGenerateFromNewsletterIdea = async () => {
     if (!newsletterIdea.trim() && !newsletterAbout.trim()) {
       toast.error('Please enter a newsletter idea or what it\'s about');
       return;
     }
 
+    const webhookUrl = (import.meta.env.VITE_N8N_NEWSLETTER_WEBHOOK_URL as string | undefined) || 
+      'http://54.88.119.163:5679/webhook/http://localhost:5000/api/newsletters';
+
     try {
       setIsGenerating(true);
-      const generated = await aiService.generateBlogContent({
-        idea: newsletterIdea,
-        details: newsletterAbout,
-        isCompanySpecific: isCompanySpecific
+      const currentFormData = buildWebhookPayload();
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(currentFormData),
       });
-      
-      if (generated.title) setValue('title', generated.title);
-      if (generated.summary) setValue('summary', generated.summary);
-      if (generated.content) setValue('content', generated.content);
-      if (generated.tags && generated.tags.length > 0) {
-        setTags(generated.tags);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      // Get response as text first to handle potential JSON parsing issues
+      const responseText = await response.text();
+      console.log('Raw n8n Newsletter Response (text):', responseText);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('Parsed n8n Newsletter Response:', result);
+        console.log('Response keys:', Object.keys(result));
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error(`Invalid JSON response from webhook: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
+
+      // IMPORTANT: NO STATUS CHECKS - n8n returns data directly
+      // Expected format: { Title, Content, Summary, Tags } (no wrapper, no status field)
       
-      toast.success('Content generated successfully!');
+      // Handle n8n response format - direct response with capitalized fields
+      // n8n returns: { Title, Content, Summary, Tags } directly
+      // Support various response formats (direct, wrapped, or array)
+      let data = result;
+      
+      // Handle array responses (n8n sometimes returns arrays)
+      if (Array.isArray(result) && result.length > 0) {
+        data = result[0].json || result[0];
+      } 
+      // Handle wrapped responses (if any)
+      else if (result.data) {
+        data = result.data;
+      } else if (result.json) {
+        data = result.json;
+      }
+      // Otherwise use result directly (most common case)
+      
+      console.log('Extracted newsletter data:', data);
+      
+      // Extract fields - handle both capitalized and lowercase field names
+      const Title = data?.title || data?.Title;
+      const Content = data?.contentHtml || data?.Content;
+      const Summary = data?.summary || data?.Summary;
+      const Tags = data?.tags || data?.Tags;
+      const Category = data?.category || data?.Category;
+      const Image = data?.image || data?.Image;
+
+      // Validate that we received at least title or content
+      if (!Title && !Content) {
+        console.error('Invalid response structure. Full result:', result);
+        console.error('Extracted data:', data);
+        throw new Error(`Response missing required fields (Title/Content). Received keys: ${Object.keys(data || {}).join(', ')}`);
+      }
+
+      if (Title) {
+        setValue('title', Title.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Content) {
+        setValue('content', Content, { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Summary) {
+        setValue('summary', Summary.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Tags) {
+        // Tags comes as a comma-separated string, convert to array
+        const tagArray = typeof Tags === 'string' 
+          ? Tags.split(',').map((t: string) => t.trim()).filter((t: string) => t)
+          : Array.isArray(Tags) 
+            ? Tags 
+            : [];
+        if (tagArray.length > 0) {
+          setTags(tagArray);
+        }
+      }
+
+      if (Category) {
+        setValue('category', Category.trim(), { shouldValidate: true, shouldDirty: true });
+      }
+
+      if (Image) {
+        setValue('image', Image.trim(), { shouldValidate: true, shouldDirty: true });
+        setImagePreview(Image.trim());
+      }
+
+      toast.success('Newsletter content generated successfully!');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to generate content');
+      toast.error(error.message || 'Failed to generate content. Please try again.');
+      console.error('Error generating newsletter content:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -353,6 +469,15 @@ export default function CreateNewsletter() {
                   placeholder="What is this newsletter about..."
                   value={newsletterAbout}
                   onChange={(e) => setNewsletterAbout(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="targetAudience">Target Audience (optional)</Label>
+                <Input
+                  id="targetAudience"
+                  placeholder="e.g., Marketing professionals, Small business owners, Tech enthusiasts..."
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
                 />
               </div>
               <div className="flex items-center justify-between">
