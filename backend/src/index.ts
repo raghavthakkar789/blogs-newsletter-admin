@@ -12,7 +12,8 @@ import blogRoutes from './routes/blogs';
 import newsletterRoutes from './routes/newsletters';
 import analyticsRoutes from './routes/analytics';
 import uploadRoutes from './routes/upload';
-import generateContentRoutes from './routes/generate-content';
+import generateBlogContentRoutes from './routes/generate-blog-content';
+import generateNewsletterContentRoutes from './routes/generate-newsletter-content';
 import { apiLimiter } from './middleware/rateLimit';
 
 dotenv.config();
@@ -66,7 +67,8 @@ app.use('/api/admin/blogs', blogRoutes);
 app.use('/api/admin/newsletters', newsletterRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/generate-content', generateContentRoutes);
+app.use('/api/generate-blog-content', generateBlogContentRoutes);
+app.use('/api/generate-newsletter-content', generateNewsletterContentRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

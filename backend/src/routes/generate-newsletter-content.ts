@@ -5,14 +5,14 @@ import axios from 'axios';
 
 const router = Router();
 
-const generateContentSchema = z.object({
-  blogIdea: z.string().optional(),
-  blogAbout: z.string().optional(),
+const generateNewsletterContentSchema = z.object({
+  newsletterIdea: z.string().optional(),
+  newsletterAbout: z.string().optional(),
   audience: z.string().optional(),
   isCompanySpecific: z.boolean().optional().default(false)
 });
 
-const regenerateFieldSchema = z.object({
+const regenerateNewsletterFieldSchema = z.object({
   field: z.enum(['title', 'summary', 'content', 'tags', 'image']),
   prompt: z.string().min(1, 'Prompt is required'),
   currentValue: z.string().optional(),
@@ -26,28 +26,28 @@ const regenerateFieldSchema = z.object({
 
 router.use(authenticate);
 
-// Generate content using AI
+// Generate newsletter content using AI
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { blogIdea, blogAbout, audience, isCompanySpecific } = generateContentSchema.parse(req.body);
+    const { newsletterIdea, newsletterAbout, audience, isCompanySpecific } = generateNewsletterContentSchema.parse(req.body);
     
     // Validate that at least one field is provided
-    if (!blogIdea?.trim() && !blogAbout?.trim()) {
+    if (!newsletterIdea?.trim() && !newsletterAbout?.trim()) {
       return res.status(400).json({ 
-        message: 'Please provide either a blog idea or what it\'s about' 
+        message: 'Please provide either a newsletter idea or what it\'s about' 
       });
     }
     
-    // Use specific webhook URL for blog idea generation
-    const webhookUrl = 'http://54.88.119.163:5679/webhook/http://localhost:5000/api/blogs';
+    // Use specific webhook URL for newsletter idea generation
+    const webhookUrl = 'http://54.88.119.163:5679/webhook/http://localhost:5000/api/newsletters';
     const timeout = parseInt(process.env.AI_WEBHOOK_TIMEOUT || '30000');
     
     // Call external webhook with POST request
     const response = await axios.post(
       webhookUrl,
       {
-        blogIdea: blogIdea || '',
-        blogAbout: blogAbout || '',
+        newsletterIdea: newsletterIdea || '',
+        newsletterAbout: newsletterAbout || '',
         audience: audience || '',
         isCompanySpecific: isCompanySpecific || false
       },
@@ -73,7 +73,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     }
     
     res.json({
-      title: title || 'Generated Blog Title',
+      title: title || 'Generated Newsletter Title',
       content: content || '',
       summary: summary || '',
       tags: tags || []
@@ -88,22 +88,23 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     }
     
     res.status(500).json({ 
-      message: error.message || 'Failed to generate content' 
+      message: error.message || 'Failed to generate newsletter content' 
     });
   }
 });
 
-// Regenerate specific field using AI
+// Regenerate specific newsletter field using AI
 router.post('/regenerate', async (req: AuthRequest, res: Response) => {
   try {
-    const { field, prompt, currentValue, context } = regenerateFieldSchema.parse(req.body);
+    const { field, prompt, currentValue, context } = regenerateNewsletterFieldSchema.parse(req.body);
     
     const timeout = parseInt(process.env.AI_WEBHOOK_TIMEOUT || '30000');
     let response;
     
-    // Use specific webhook URL for title regeneration
+    // Use specific webhook URLs for newsletter field regeneration
     if (field === 'title') {
-      const titleWebhookUrl = 'http://54.88.119.163:5679/webhook/a03946d5-0449-4156-89c8-36f2f021803c';
+      // Newsletter title regeneration webhook URL
+      const titleWebhookUrl = 'http://54.88.119.163:5679/webhook/90c40868-aa5f-4e20-bd83-596f95af9d6a';
       
       // Call external webhook with POST request for title
       response = await axios.post(
@@ -122,7 +123,8 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
         }
       );
     } else if (field === 'summary') {
-      const summaryWebhookUrl = 'http://54.88.119.163:5679/webhook/438b14c0-3bd6-4636-9831-a7bb3463c926';
+      // Newsletter summary regeneration webhook URL
+      const summaryWebhookUrl = 'http://54.88.119.163:5679/webhook/4b95e8d4-de01-4eda-a028-44509d9f729b';
       
       // Call external webhook with POST request for summary
       response = await axios.post(
@@ -141,7 +143,8 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
         }
       );
     } else if (field === 'content') {
-      const contentWebhookUrl = 'http://54.88.119.163:5679/webhook/ddab5050-03cd-4d48-8a74-2b07e5d17e96';
+      // Newsletter content regeneration webhook URL
+      const contentWebhookUrl = 'http://54.88.119.163:5679/webhook/587acc62-5c71-4c3d-8432-89cc47caa751';
       
       // Call external webhook with POST request for content
       response = await axios.post(
@@ -160,7 +163,7 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
         }
       );
     } else {
-      // Use default webhook for other fields
+      // Use default webhook for other fields (tags, image)
       const webhookUrl = process.env.AI_WEBHOOK_URL;
       
       if (!webhookUrl) {
@@ -239,7 +242,7 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
     }
     
     res.status(500).json({ 
-      message: error.message || 'Failed to regenerate field' 
+      message: error.message || 'Failed to regenerate newsletter field' 
     });
   }
 });

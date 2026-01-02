@@ -5,14 +5,14 @@ import axios from 'axios';
 
 const router = Router();
 
-const generateContentSchema = z.object({
+const generateBlogContentSchema = z.object({
   blogIdea: z.string().optional(),
   blogAbout: z.string().optional(),
   audience: z.string().optional(),
   isCompanySpecific: z.boolean().optional().default(false)
 });
 
-const regenerateFieldSchema = z.object({
+const regenerateBlogFieldSchema = z.object({
   field: z.enum(['title', 'summary', 'content', 'tags', 'image']),
   prompt: z.string().min(1, 'Prompt is required'),
   currentValue: z.string().optional(),
@@ -21,15 +21,16 @@ const regenerateFieldSchema = z.object({
     summary: z.string().optional(),
     content: z.string().optional(),
     tags: z.array(z.string()).optional(),
+    author: z.string().optional(),
   }).optional()
 });
 
 router.use(authenticate);
 
-// Generate content using AI
+// Generate blog content using AI
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { blogIdea, blogAbout, audience, isCompanySpecific } = generateContentSchema.parse(req.body);
+    const { blogIdea, blogAbout, audience, isCompanySpecific } = generateBlogContentSchema.parse(req.body);
     
     // Validate that at least one field is provided
     if (!blogIdea?.trim() && !blogAbout?.trim()) {
@@ -88,20 +89,20 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     }
     
     res.status(500).json({ 
-      message: error.message || 'Failed to generate content' 
+      message: error.message || 'Failed to generate blog content' 
     });
   }
 });
 
-// Regenerate specific field using AI
+// Regenerate specific blog field using AI
 router.post('/regenerate', async (req: AuthRequest, res: Response) => {
   try {
-    const { field, prompt, currentValue, context } = regenerateFieldSchema.parse(req.body);
+    const { field, prompt, currentValue, context } = regenerateBlogFieldSchema.parse(req.body);
     
     const timeout = parseInt(process.env.AI_WEBHOOK_TIMEOUT || '30000');
     let response;
     
-    // Use specific webhook URL for title regeneration
+    // Use specific webhook URLs for blog field regeneration
     if (field === 'title') {
       const titleWebhookUrl = 'http://54.88.119.163:5679/webhook/a03946d5-0449-4156-89c8-36f2f021803c';
       
@@ -141,7 +142,7 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
         }
       );
     } else if (field === 'content') {
-      const contentWebhookUrl = 'http://54.88.119.163:5679/webhook/ddab5050-03cd-4d48-8a74-2b07e5d17e96';
+      const contentWebhookUrl = 'http://54.88.119.163:5679/webhook-test/ddab5050-03cd-4d48-8a74-2b07e5d17e96';
       
       // Call external webhook with POST request for content
       response = await axios.post(
@@ -160,7 +161,7 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
         }
       );
     } else {
-      // Use default webhook for other fields
+      // Use default webhook for other fields (tags, image)
       const webhookUrl = process.env.AI_WEBHOOK_URL;
       
       if (!webhookUrl) {
@@ -239,7 +240,7 @@ router.post('/regenerate', async (req: AuthRequest, res: Response) => {
     }
     
     res.status(500).json({ 
-      message: error.message || 'Failed to regenerate field' 
+      message: error.message || 'Failed to regenerate blog field' 
     });
   }
 });

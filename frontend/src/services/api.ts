@@ -244,8 +244,8 @@ export const uploadService = {
   },
 };
 
-// AI Content Generation
-export const aiService = {
+// AI Content Generation - Blog
+export const blogContentService = {
   generateBlogContent: async (data: {
     idea: string;
     details?: string;
@@ -257,7 +257,7 @@ export const aiService = {
     summary: string;
     tags?: string[];
   }> => {
-    const response = await api.post('/generate-content', {
+    const response = await api.post('/generate-blog-content', {
       blogIdea: data.idea,
       blogAbout: data.details || '',
       audience: data.audience || '',
@@ -265,7 +265,7 @@ export const aiService = {
     });
     return response.data;
   },
-  regenerateField: async (data: {
+  regenerateBlogField: async (data: {
     field: 'title' | 'summary' | 'content' | 'category' | 'tags' | 'author' | 'image';
     prompt: string;
     currentValue?: string;
@@ -281,18 +281,66 @@ export const aiService = {
     field: string;
     value: string;
   }> => {
-    const response = await api.post('/generate-content/regenerate', data);
+    const response = await api.post('/generate-blog-content/regenerate', data);
     return response.data;
   },
 };
 
+// AI Content Generation - Newsletter
+export const newsletterContentService = {
+  generateNewsletterContent: async (data: {
+    idea: string;
+    details?: string;
+    audience?: string;
+    isCompanySpecific?: boolean;
+  }): Promise<{
+    title: string;
+    content: string;
+    summary: string;
+    tags?: string[];
+  }> => {
+    const response = await api.post('/generate-newsletter-content', {
+      newsletterIdea: data.idea,
+      newsletterAbout: data.details || '',
+      audience: data.audience || '',
+      isCompanySpecific: data.isCompanySpecific || false
+    });
+    return response.data;
+  },
+  regenerateNewsletterField: async (data: {
+    field: 'title' | 'summary' | 'content' | 'category' | 'tags' | 'image';
+    prompt: string;
+    currentValue?: string;
+    context?: {
+      title?: string;
+      summary?: string;
+      content?: string;
+      category?: string;
+      tags?: string[];
+    };
+  }): Promise<{
+    field: string;
+    value: string;
+  }> => {
+    const response = await api.post('/generate-newsletter-content/regenerate', data);
+    return response.data;
+  },
+};
+
+// Legacy AI Service (for backward compatibility - uses blog endpoints)
+export const aiService = {
+  generateBlogContent: blogContentService.generateBlogContent,
+  regenerateField: blogContentService.regenerateBlogField,
+};
+
+// Legacy service (for backward compatibility)
 export const generateContentService = {
   generateContent: async (blogIdea: string, blogAbout: string): Promise<{
     title: string;
     content: string;
     summary: string;
   }> => {
-    const response = await api.post('/generate-content', { blogIdea, blogAbout });
+    const response = await api.post('/generate-blog-content', { blogIdea, blogAbout });
     return response.data;
   },
 };

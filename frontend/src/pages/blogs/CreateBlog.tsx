@@ -652,21 +652,7 @@ export default function CreateBlog() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="tags">Tags</Label>
-                  {tags.length > 0 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRegenerateField('tags')}
-                      className="h-7 text-xs"
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Regenerate
-                    </Button>
-                  )}
-                </div>
+                <Label htmlFor="tags">Tags</Label>
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input
