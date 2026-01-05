@@ -289,6 +289,15 @@ router.patch('/:id', logActivity('UPDATE_NEWSLETTER', 'Newsletter'), async (req:
       editHistory: updatedHistory
     };
     
+    // If a MARKETING_MANAGER edits a non-pending newsletter, set it back to PENDING for re-approval
+    // PENDING newsletters remain PENDING when edited
+    // REJECTED and DISABLED newsletters go back to PENDING when edited by MARKETING_MANAGER
+    if (newsletter.status !== 'PENDING' && req.user!.role === 'MARKETING_MANAGER') {
+      updateData.status = 'PENDING';
+      updateData.approvedById = null;
+      updateData.publishedAt = null;
+    }
+    
     const updatedNewsletter = await prisma.newsletter.update({
       where: { id: req.params.id },
       data: updateData,

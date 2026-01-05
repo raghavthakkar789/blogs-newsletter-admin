@@ -11,7 +11,7 @@ export const canAccessBlog = (user: AccessUser, blog: Blog): boolean => {
 };
 
 export const canEditBlog = (user: AccessUser, blog: Blog): boolean => {
-  // Both ADMIN and MARKETING_MANAGER can edit all blogs
+  // Both ADMIN and MARKETING_MANAGER can edit all blogs regardless of status (PENDING, APPROVED, etc.)
   return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 
@@ -29,7 +29,7 @@ export const canAccessNewsletter = (user: AccessUser, newsletter: Newsletter): b
 };
 
 export const canEditNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
-  // Both ADMIN and MARKETING_MANAGER can edit all newsletters
+  // Both ADMIN and MARKETING_MANAGER can edit all newsletters regardless of status (PENDING, APPROVED, etc.)
   return user.role === 'ADMIN' || user.role === 'MARKETING_MANAGER';
 };
 

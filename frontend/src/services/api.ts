@@ -110,7 +110,8 @@ export const blogService = {
     return response.data;
   },
   getBlog: async (id: string): Promise<{ blog: Blog }> => {
-    const response = await api.get(`/blogs/${id}`);
+    // Use authenticated endpoint to get blogs with any status (not just APPROVED)
+    const response = await api.get(`/blogs/admin/internal/${id}`);
     return response.data;
   },
   createBlog: async (data: {
@@ -168,7 +169,8 @@ export const newsletterService = {
     return response.data;
   },
   getNewsletter: async (id: string): Promise<{ newsletter: Newsletter }> => {
-    const response = await api.get(`/newsletters/${id}`);
+    // Use authenticated endpoint to get newsletters with any status (not just APPROVED)
+    const response = await api.get(`/newsletters/admin/internal/${id}`);
     return response.data;
   },
   createNewsletter: async (data: {

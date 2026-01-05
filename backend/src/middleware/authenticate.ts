@@ -48,6 +48,19 @@ export const authenticate = async (
       return res.status(401).json({ message: 'User not found' });
     }
 
+    // Check if user is suspended - delete the user
+    if (user.status === 'SUSPENDED') {
+      await prisma.user.delete({
+        where: { id: user.id }
+      });
+      return res.status(403).json({ message: 'Account has been suspended and removed' });
+    }
+
+    // Check if user is inactive - prevent access
+    if (user.status === 'INACTIVE') {
+      return res.status(403).json({ message: 'Account is inactive. Please contact an administrator.' });
+    }
+
     if (user.status !== 'ACTIVE') {
       return res.status(403).json({ message: 'Account is not active' });
     }

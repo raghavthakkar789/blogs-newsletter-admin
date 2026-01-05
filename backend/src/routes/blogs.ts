@@ -290,6 +290,14 @@ router.patch('/:id', logActivity('UPDATE_BLOG', 'Blog'), async (req: AuthRequest
       editHistory: updatedHistory
     };
     
+    // If a MARKETING_MANAGER edits an approved blog, set it back to PENDING for re-approval
+    // PENDING blogs remain PENDING when edited
+    if (blog.status === 'APPROVED' && req.user!.role === 'MARKETING_MANAGER') {
+      updateData.status = 'PENDING';
+      updateData.approvedById = null;
+      updateData.publishedAt = null;
+    }
+    
     const updatedBlog = await prisma.blog.update({
       where: { id: req.params.id },
       data: updateData,

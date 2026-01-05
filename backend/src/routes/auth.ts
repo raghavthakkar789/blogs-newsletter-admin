@@ -152,6 +152,23 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
+    // Check if user is suspended - delete the user
+    if (user.status === 'SUSPENDED') {
+      await prisma.user.delete({
+        where: { id: user.id }
+      });
+      return res.status(403).json({ 
+        message: 'Account has been suspended and removed' 
+      });
+    }
+    
+    // Check if user is inactive - prevent login
+    if (user.status === 'INACTIVE') {
+      return res.status(403).json({ 
+        message: 'Account is inactive. Please contact an administrator.' 
+      });
+    }
+    
     // Check if account is locked
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       return res.status(403).json({ 
@@ -242,7 +259,24 @@ router.post('/refresh', async (req: Request, res: Response) => {
       where: { id: decoded.userId }
     });
     
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+    
+    // Check if user is suspended - delete the user
+    if (user.status === 'SUSPENDED') {
+      await prisma.user.delete({
+        where: { id: user.id }
+      });
+      return res.status(403).json({ message: 'Account has been suspended and removed' });
+    }
+    
+    // Check if user is inactive - prevent token refresh
+    if (user.status === 'INACTIVE') {
+      return res.status(403).json({ message: 'Account is inactive. Please contact an administrator.' });
+    }
+    
+    if (user.status !== 'ACTIVE') {
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
     
