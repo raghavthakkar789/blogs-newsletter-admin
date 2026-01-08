@@ -11,6 +11,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Proxy configuration for development
+    // Note: If VITE_API_URL is set, axios will use it directly instead of the proxy
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

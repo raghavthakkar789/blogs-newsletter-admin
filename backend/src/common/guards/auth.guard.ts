@@ -13,12 +13,23 @@ export class AuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
-    const token = authHeader?.split(' ')[1];
+    
+    if (!authHeader) {
+      throw new UnauthorizedException('No authorization header');
+    }
+    
+    const token = authHeader.split(' ')[1]?.trim();
+    const adminToken = this.configService.get<string>('ADMIN_TOKEN', 'admin-token')?.trim();
 
-    const adminToken = this.configService.get<string>('ADMIN_TOKEN', 'admin-token');
+    // Debug logging (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[AuthGuard] Received token:', token ? `${token.substring(0, 10)}...` : 'none');
+      console.debug('[AuthGuard] Expected token:', adminToken ? `${adminToken.substring(0, 10)}...` : 'none');
+      console.debug('[AuthGuard] Tokens match:', token === adminToken);
+    }
 
     if (!token || token !== adminToken) {
-      throw new UnauthorizedException('Unauthorized');
+      throw new UnauthorizedException('Unauthorized: Token mismatch');
     }
 
     // Set hardcoded admin user from env

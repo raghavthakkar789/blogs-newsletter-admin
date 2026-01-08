@@ -215,8 +215,11 @@ export default function CreateNewsletter() {
       return;
     }
 
+    // Build webhook URL using VITE_API_URL or fallback to default
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const backendApiUrl = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
     const webhookUrl = (import.meta.env.VITE_N8N_NEWSLETTER_WEBHOOK_URL as string | undefined) || 
-      'http://54.88.119.163:5679/webhook/http://localhost:5000/api/newsletters';
+      `http://54.88.119.163:5679/webhook/${backendApiUrl}/newsletters`;
 
     try {
       setIsGenerating(true);
