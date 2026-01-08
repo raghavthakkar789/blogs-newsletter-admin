@@ -25,8 +25,8 @@ export default function ViewBlog() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['blog', id],
     queryFn: async () => {
-      // Use internal endpoint to get blog with any status
-      const response = await api.get(`/blogs/admin/internal/${id}`);
+      // Use endpoint to get blog with any status
+      const response = await api.get(`/blogs/${id}`);
       return response.data;
     },
     enabled: !!id

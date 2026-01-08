@@ -25,8 +25,8 @@ export default function ViewNewsletter() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['newsletter', id],
     queryFn: async () => {
-      // Use internal endpoint to get newsletter with any status
-      const response = await api.get(`/newsletters/admin/internal/${id}`);
+      // Use endpoint to get newsletter with any status
+      const response = await api.get(`/newsletters/${id}`);
       return response.data;
     },
     enabled: !!id

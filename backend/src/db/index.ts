@@ -43,6 +43,8 @@ function getPool(): Pool {
       max: 20, // Maximum number of clients in the pool
       idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
       connectionTimeoutMillis: 2000, // Return error after 2 seconds if connection cannot be established
+      // SSL configuration
+      ssl: false,
     });
 
     // Handle pool errors (don't exit process, just log)

@@ -24,12 +24,12 @@ import { ContentStatus } from '../types/database';
 import { LoggingInterceptor } from '../common/interceptors/logging.interceptor';
 
 @Controller('blogs')
-@UseGuards(AuthGuard, ThrottlerGuard)
 @UseInterceptors(LoggingInterceptor)
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}
 
-  @Get('admin/internal')
+  @Get()
+  @UseGuards(ThrottlerGuard)
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
@@ -51,12 +51,14 @@ export class BlogsController {
     return await this.blogsService.findAll(page, limit, filters);
   }
 
-  @Get('admin/internal/:id')
+  @Get(':id')
+  @UseGuards(ThrottlerGuard)
   async findOne(@Param('id') id: string) {
     return await this.blogsService.findOne(id);
   }
 
   @Post()
+  @UseGuards(AuthGuard, ThrottlerGuard)
   async create(
     @Body() createBlogDto: CreateBlogDto,
     @CurrentUser() user: CurrentUserType,
@@ -67,6 +69,7 @@ export class BlogsController {
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard, ThrottlerGuard)
   async update(
     @Param('id') id: string,
     @Body() updateBlogDto: UpdateBlogDto,
@@ -76,11 +79,13 @@ export class BlogsController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard, ThrottlerGuard)
   async remove(@Param('id') id: string) {
     return await this.blogsService.remove(id);
   }
 
   @Patch(':id/status')
+  @UseGuards(AuthGuard, ThrottlerGuard)
   async updateStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateStatusDto,
@@ -89,6 +94,7 @@ export class BlogsController {
   }
 
   @Patch('bulk/status')
+  @UseGuards(AuthGuard, ThrottlerGuard)
   async bulkUpdateStatus(@Body() bulkUpdateStatusDto: BulkUpdateStatusDto) {
     return await this.blogsService.bulkUpdateStatus(bulkUpdateStatusDto);
   }

@@ -10,13 +10,13 @@ export const blogService = {
     createdById?: string;
     search?: string;
   }): Promise<{ blogs: Blog[]; total: number; page: number; totalPages: number }> => {
-    // Use authenticated internal endpoint so status filters and role-based access work for the dashboard
-    const response = await api.get('/blogs/admin/internal', { params });
+    // Use authenticated endpoint so status filters and role-based access work for the dashboard
+    const response = await api.get('/blogs', { params });
     return response.data;
   },
   getBlog: async (id: string): Promise<{ blog: Blog }> => {
     // Use authenticated endpoint to get blogs with any status (not just APPROVED)
-    const response = await api.get(`/blogs/admin/internal/${id}`);
+    const response = await api.get(`/blogs/${id}`);
     return response.data;
   },
   createBlog: async (data: {
@@ -69,13 +69,13 @@ export const newsletterService = {
     createdById?: string;
     search?: string;
   }): Promise<{ newsletters: Newsletter[]; total: number; page: number; totalPages: number }> => {
-    // Use authenticated internal endpoint so status filters and role-based access work for the dashboard
-    const response = await api.get('/newsletters/admin/internal', { params });
+    // Use authenticated endpoint so status filters and role-based access work for the dashboard
+    const response = await api.get('/newsletters', { params });
     return response.data;
   },
   getNewsletter: async (id: string): Promise<{ newsletter: Newsletter }> => {
     // Use authenticated endpoint to get newsletters with any status (not just APPROVED)
-    const response = await api.get(`/newsletters/admin/internal/${id}`);
+    const response = await api.get(`/newsletters/${id}`);
     return response.data;
   },
   createNewsletter: async (data: {

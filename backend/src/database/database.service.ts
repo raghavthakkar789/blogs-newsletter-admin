@@ -35,6 +35,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
+      // SSL configuration
+      ssl: false,
     });
 
     this.pool.on('error', (err) => {

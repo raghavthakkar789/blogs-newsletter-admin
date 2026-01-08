@@ -572,10 +572,8 @@ POST /api/auth/change-password - Change password (authenticated)
 #### Blog Endpoints
 
 ```
-GET /api/blogs - Get all approved blogs (public)
-GET /api/blogs/:id - Get single approved blog (public)
-GET /api/blogs/admin/internal - Get all blogs with filters (authenticated)
-GET /api/blogs/admin/internal/:id - Get single blog with details (authenticated)
+GET /api/blogs - Get all blogs with filters (public)
+GET /api/blogs/:id - Get single blog with details (public)
 POST /api/blogs - Create blog (authenticated)
 PATCH /api/blogs/:id - Update blog (authenticated)
 DELETE /api/blogs/:id - Delete blog (admin only)
@@ -586,10 +584,8 @@ PATCH /api/blogs/bulk/status - Bulk update blog status (admin only)
 #### Newsletter Endpoints
 
 ```
-GET /api/newsletters - Get all approved newsletters (public)
-GET /api/newsletters/:id - Get single approved newsletter (public)
-GET /api/newsletters/admin/internal - Get all newsletters with filters (authenticated)
-GET /api/newsletters/admin/internal/:id - Get single newsletter with details (authenticated)
+GET /api/newsletters - Get all newsletters with filters (public)
+GET /api/newsletters/:id - Get single newsletter with details (public)
 POST /api/newsletters - Create newsletter (authenticated)
 PATCH /api/newsletters/:id - Update newsletter (authenticated)
 DELETE /api/newsletters/:id - Delete newsletter (admin only)
