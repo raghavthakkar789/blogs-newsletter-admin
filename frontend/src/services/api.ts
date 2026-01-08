@@ -1,100 +1,5 @@
 import api from '../lib/axios';
-import { User, Blog, Newsletter, ActivityLog, DashboardStats } from '../types';
-
-// Auth
-export const authService = {
-  login: async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
-    return response.data;
-  },
-  register: async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    role?: 'ADMIN' | 'MARKETING_MANAGER';
-  }) => {
-    const response = await api.post('/auth/register', data);
-    return response.data;
-  },
-  logout: async () => {
-    await api.post('/auth/logout');
-    localStorage.removeItem('accessToken');
-  },
-  getMe: async (): Promise<{ user: User }> => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
-  refreshToken: async () => {
-    const response = await api.post('/auth/refresh');
-    return response.data;
-  },
-  forgotPassword: async (email: string) => {
-    const response = await api.post('/auth/forgot-password', { email });
-    return response.data;
-  },
-  resetPassword: async (token: string, newPassword: string) => {
-    const response = await api.post('/auth/reset-password', { token, newPassword });
-    return response.data;
-  },
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    const response = await api.post('/auth/change-password', { currentPassword, newPassword });
-    return response.data;
-  },
-  updateProfile: async (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  }): Promise<{ user: User }> => {
-    const response = await api.patch('/auth/profile', data);
-    return response.data;
-  },
-};
-
-// Users (Admin only)
-export const userService = {
-  getUsers: async (params?: {
-    page?: number;
-    limit?: number;
-    role?: string;
-    status?: string;
-    search?: string;
-  }): Promise<{ users: User[]; total: number; page: number; totalPages: number }> => {
-    const response = await api.get('/users', { params });
-    return response.data;
-  },
-  getUser: async (id: string): Promise<{ user: User }> => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-  },
-  createUser: async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    role: 'ADMIN' | 'MARKETING_MANAGER';
-  }): Promise<{ user: User }> => {
-    const response = await api.post('/users', data);
-    return response.data;
-  },
-  updateUser: async (id: string, data: {
-    firstName?: string;
-    lastName?: string;
-    status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-    role?: 'ADMIN' | 'MARKETING_MANAGER';
-  }): Promise<{ user: User }> => {
-    const response = await api.patch(`/users/${id}`, data);
-    return response.data;
-  },
-  deleteUser: async (id: string): Promise<{ message: string }> => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-  resetUserPassword: async (id: string): Promise<{ temporaryPassword: string }> => {
-    const response = await api.post(`/users/${id}/reset-password`);
-    return response.data;
-  },
-};
+import { Blog, Newsletter, ActivityLog, DashboardStats } from '../types';
 
 // Blogs
 export const blogService = {
@@ -333,17 +238,5 @@ export const newsletterContentService = {
 export const aiService = {
   generateBlogContent: blogContentService.generateBlogContent,
   regenerateField: blogContentService.regenerateBlogField,
-};
-
-// Legacy service (for backward compatibility)
-export const generateContentService = {
-  generateContent: async (blogIdea: string, blogAbout: string): Promise<{
-    title: string;
-    content: string;
-    summary: string;
-  }> => {
-    const response = await api.post('/generate-blog-content', { blogIdea, blogAbout });
-    return response.data;
-  },
 };
 

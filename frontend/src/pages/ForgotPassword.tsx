@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { authService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,9 +33,9 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
       setEmail(data.email);
-      await authService.forgotPassword(data.email);
+      // Password reset disabled - using hardcoded admin user
+      toast.info('Password reset is not available with the current authentication setup');
       setSent(true);
-      toast.success('Password reset link sent to your email');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to send reset link');
     } finally {

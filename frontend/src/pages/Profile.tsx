@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
-import { authService, analyticsService } from '@/services/api';
+import { analyticsService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,9 +83,8 @@ export default function Profile() {
   const onSubmitProfile = async (data: UpdateProfileFormData) => {
     try {
       setIsUpdatingProfile(true);
-      await authService.updateProfile(data);
-      await refreshUser();
-      toast.success('Profile updated successfully');
+      // Profile updates disabled - using hardcoded admin user
+      toast.info('Profile updates are not available with the current authentication setup');
       resetProfile();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update profile');
@@ -97,8 +96,8 @@ export default function Profile() {
   const onSubmitPassword = async (data: ChangePasswordFormData) => {
     try {
       setIsUpdatingPassword(true);
-      await authService.changePassword(data.currentPassword, data.newPassword);
-      toast.success('Password changed successfully');
+      // Password changes disabled - using hardcoded admin user
+      toast.info('Password changes are not available with the current authentication setup');
       resetPassword();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to change password');

@@ -3,7 +3,6 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { authService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -76,8 +75,8 @@ export default function ResetPassword() {
 
     try {
       setLoading(true);
-      await authService.resetPassword(token, data.password);
-      toast.success('Password reset successfully');
+      // Password reset disabled - using hardcoded admin user
+      toast.info('Password reset is not available with the current authentication setup');
       navigate('/login');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to reset password');

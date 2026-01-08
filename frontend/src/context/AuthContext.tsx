@@ -1,13 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { authService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,45 +12,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const login = async (email: string, password: string) => {
-    const response = await authService.login(email, password);
-    localStorage.setItem('accessToken', response.accessToken);
-    setUser(response.user);
-  };
-
-  const logout = async () => {
-    await authService.logout();
-    setUser(null);
-  };
-
-  const refreshUser = async () => {
-    try {
-      const response = await authService.getMe();
-      setUser(response.user);
-    } catch (error) {
-      setUser(null);
-      localStorage.removeItem('accessToken');
-    }
-  };
-
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        try {
-          await refreshUser();
-        } catch (error) {
-          localStorage.removeItem('accessToken');
-        }
-      }
-      setLoading(false);
-    };
-
-    initAuth();
+    // Set hardcoded admin user from env
+    const adminToken = import.meta.env.VITE_ADMIN_TOKEN || 'admin-token';
+    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@example.com';
+    const adminName = import.meta.env.VITE_ADMIN_NAME || 'Admin User';
+    const nameParts = adminName.split(' ');
+    
+    // Store token in localStorage for API requests
+    localStorage.setItem('accessToken', adminToken);
+    
+    // Set user
+    setUser({
+      id: 'admin',
+      email: adminEmail,
+      firstName: nameParts[0] || 'Admin',
+      lastName: nameParts.slice(1).join(' ') || 'User',
+      role: 'ADMIN',
+      status: 'ACTIVE'
+    });
+    
+    setLoading(false);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading }}>
       {children}
     </AuthContext.Provider>
   );

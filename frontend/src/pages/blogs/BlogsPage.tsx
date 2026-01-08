@@ -309,7 +309,7 @@ export default function BlogsPage() {
         />
       ) : viewMode === 'grid' ? (
         <>
-          {user?.role === 'ADMIN' && (
+          {(
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-muted-foreground">
                 {hasSelection
@@ -370,7 +370,7 @@ export default function BlogsPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        {user?.role === 'ADMIN' && blog.status === 'PENDING' && (
+                        {blog.status === 'PENDING' && (
                           <>
                             <DropdownMenuItem onClick={() => handleApprove(blog.id)}>
                               <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
@@ -382,19 +382,19 @@ export default function BlogsPage() {
                             </DropdownMenuItem>
                           </>
                         )}
-                        {user?.role === 'ADMIN' && blog.status === 'APPROVED' && (
+                        {blog.status === 'APPROVED' && (
                           <DropdownMenuItem onClick={() => handleDisable(blog.id)}>
                             <Ban className="mr-2 h-4 w-4 text-muted-foreground" />
                             Disable
                           </DropdownMenuItem>
                         )}
-                        {user?.role === 'ADMIN' && blog.status === 'DISABLED' && (
+                        {blog.status === 'DISABLED' && (
                           <DropdownMenuItem onClick={() => handleEnable(blog.id)}>
                             <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                             Re-enable
                           </DropdownMenuItem>
                         )}
-                        {user?.role === 'ADMIN' && (
+                        {(
                           <DropdownMenuItem onClick={() => handleDelete(blog.id)} className="text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
@@ -475,7 +475,7 @@ export default function BlogsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                {user?.role === 'ADMIN' && (
+                {(
                   <TableHead className="w-10">
                     <input
                       type="checkbox"
@@ -495,7 +495,7 @@ export default function BlogsPage() {
               <TableBody>
                 {blogs.map((blog) => (
                   <TableRow key={blog.id}>
-                    {user?.role === 'ADMIN' && (
+                    {(
                       <TableCell>
                         <input
                           type="checkbox"
@@ -539,7 +539,7 @@ export default function BlogsPage() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          {user?.role === 'ADMIN' && blog.status === 'PENDING' && (
+                          {blog.status === 'PENDING' && (
                             <>
                               <DropdownMenuItem onClick={() => handleApprove(blog.id)}>
                                 <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
@@ -551,19 +551,19 @@ export default function BlogsPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {user?.role === 'ADMIN' && blog.status === 'APPROVED' && (
+                          {blog.status === 'APPROVED' && (
                             <DropdownMenuItem onClick={() => handleDisable(blog.id)}>
                               <Ban className="mr-2 h-4 w-4 text-muted-foreground" />
                               Disable
                             </DropdownMenuItem>
                           )}
-                          {user?.role === 'ADMIN' && blog.status === 'DISABLED' && (
+                          {blog.status === 'DISABLED' && (
                             <DropdownMenuItem onClick={() => handleEnable(blog.id)}>
                               <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                               Re-enable
                             </DropdownMenuItem>
                           )}
-                          {user?.role === 'ADMIN' && (
+                          {(
                             <DropdownMenuItem onClick={() => handleDelete(blog.id)} className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete

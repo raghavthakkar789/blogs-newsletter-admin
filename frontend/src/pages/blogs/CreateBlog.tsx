@@ -818,7 +818,7 @@ export default function CreateBlog() {
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {user?.role === 'ADMIN' ? 'Publish' : 'Submit for Approval'}
+                Publish
               </Button>
             </div>
           </div>

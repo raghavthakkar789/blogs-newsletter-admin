@@ -1,6 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { prisma } from '../lib/prisma';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -8,13 +6,11 @@ export interface AuthRequest extends Request {
     email: string;
     firstName: string;
     lastName: string;
-    role: 'ADMIN' | 'MARKETING_MANAGER';
-    status: string;
-    avatar?: string | null;
   };
 }
 
-export const authenticate = async (
+// Simple authentication using hardcoded admin token from env
+export const authenticate = (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -23,52 +19,28 @@ export const authenticate = async (
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
     
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+    // Get admin token from environment
+    const adminToken = process.env.ADMIN_TOKEN || 'admin-token';
+    
+    if (!token || token !== adminToken) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      userId: string;
+    // Set hardcoded admin user from env
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+    const adminName = process.env.ADMIN_NAME || 'Admin User';
+    const nameParts = adminName.split(' ');
+    
+    req.user = {
+      id: 'admin',
+      email: adminEmail,
+      firstName: nameParts[0] || 'Admin',
+      lastName: nameParts.slice(1).join(' ') || 'User'
     };
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        status: true,
-        avatar: true
-      }
-    });
-
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    // Check if user is suspended - delete the user
-    if (user.status === 'SUSPENDED') {
-      await prisma.user.delete({
-        where: { id: user.id }
-      });
-      return res.status(403).json({ message: 'Account has been suspended and removed' });
-    }
-
-    // Check if user is inactive - prevent access
-    if (user.status === 'INACTIVE') {
-      return res.status(403).json({ message: 'Account is inactive. Please contact an administrator.' });
-    }
-
-    if (user.status !== 'ACTIVE') {
-      return res.status(403).json({ message: 'Account is not active' });
-    }
-
-    req.user = user;
+    
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
 };
 

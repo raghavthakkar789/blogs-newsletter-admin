@@ -1,10 +1,16 @@
-import { Router, Response, Request } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/authenticate';
 import { logActivity } from '../middleware/logActivity';
-import { requireRole } from '../middleware/requireRole';
-import { canAccessBlog, canEditBlog, canDeleteBlog } from '../utils/accessControl';
+import { getAdminUserId } from '../utils/adminUser';
+import {
+  findBlogs,
+  findBlogById,
+  createBlog,
+  updateBlog,
+  deleteBlog,
+  bulkUpdateBlogStatus,
+} from '../db/queries';
 
 const router = Router();
 
@@ -25,63 +31,6 @@ const statusSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DISABLED'])
 });
 
-// Public GET: list approved blogs (SEO/public)
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string | undefined;
-    
-    const where: any = {
-      status: 'APPROVED'
-    };
-    
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-        { summary: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-    
-    const [blogs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.blog.count({ where })
-    ]);
-    
-    res.json({
-      blogs,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit)
-    });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message || 'Internal server error' });
-  }
-});
-
-// Public GET: single approved blog
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const blog = await prisma.blog.findFirst({
-      where: { id: req.params.id, status: 'APPROVED' }
-    });
-    
-    if (!blog) {
-      return res.status(404).json({ message: 'Blog not found' });
-    }
-    
-    res.json({ blog });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message || 'Internal server error' });
-  }
-});
-
 // Authenticated routes for admin/marketing UI
 router.use(authenticate);
 
@@ -94,61 +43,18 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     const createdById = req.query.createdById as string | undefined;
     const search = req.query.search as string | undefined;
     
-    const where: any = {};
-    const andConditions: any[] = [];
-    
-    // Both ADMIN and MARKETING_MANAGER can see all blogs
-    // Apply filters normally
+    const filters: any = {};
     if (status && status !== 'all') {
-      andConditions.push({ status });
+      filters.status = status as any;
     }
-    
     if (createdById) {
-      andConditions.push({ createdById });
+      filters.createdById = createdById;
     }
-    
     if (search) {
-      andConditions.push({
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { content: { contains: search, mode: 'insensitive' } },
-          { summary: { contains: search, mode: 'insensitive' } }
-        ]
-      });
+      filters.search = search;
     }
     
-    if (andConditions.length > 0) {
-      where.AND = andConditions;
-    }
-    
-    console.log('Blogs query where clause:', JSON.stringify(where, null, 2));
-    
-    const [blogs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          approvedBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true
-            }
-          }
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { updatedAt: 'desc' } // Sort by updatedAt to show most recently edited first
-      }),
-      prisma.blog.count({ where })
-    ]);
+    const { blogs, total } = await findBlogs(page, limit, filters);
     
     res.json({
       blogs,
@@ -158,7 +64,6 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error fetching blogs:', error);
-    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message || 'Internal server error' });
   }
 });
@@ -166,33 +71,10 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
 // Authenticated GET: single blog with access control
 router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const blog = await prisma.blog.findUnique({
-      where: { id: req.params.id },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    const blog = await findBlogById(req.params.id);
     
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
-    }
-    
-    if (!canAccessBlog(req.user!, blog)) {
-      return res.status(403).json({ message: 'Forbidden' });
     }
     
     res.json({ blog });
@@ -205,27 +87,28 @@ router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
 router.post('/', logActivity('CREATE_BLOG', 'Blog'), async (req: AuthRequest, res: Response) => {
   try {
     const data = blogSchema.parse(req.body);
+    const adminId = await getAdminUserId();
     
-    const blog = await prisma.blog.create({
-      data: {
-        ...data,
-        image: data.image || null,
-        createdById: req.user!.id,
-        status: 'PENDING'
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
+    const blog = await createBlog({
+      ...data,
+      tags: data.tags || [],
+      image: data.image || null,
+      createdById: adminId,
+      status: 'PENDING',
+      summary: data.summary || null,
+      category: data.category || null,
+      author: data.author || null,
+      approvedById: null,
+      publishedAt: null,
+      editHistory: null,
+      lastEditedAt: null,
+      lastEditedBy: null,
     });
     
-    res.status(201).json({ blog });
+    // Fetch with relations for response
+    const blogWithRelations = await findBlogById(blog.id);
+    
+    res.status(201).json({ blog: blogWithRelations });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: error.errors[0].message });
@@ -237,16 +120,10 @@ router.post('/', logActivity('CREATE_BLOG', 'Blog'), async (req: AuthRequest, re
 // Update blog
 router.patch('/:id', logActivity('UPDATE_BLOG', 'Blog'), async (req: AuthRequest, res: Response) => {
   try {
-    const blog = await prisma.blog.findUnique({
-      where: { id: req.params.id }
-    });
+    const blog = await findBlogById(req.params.id);
     
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
-    }
-    
-    if (!canEditBlog(req.user!, blog)) {
-      return res.status(403).json({ message: 'Forbidden: Cannot edit this blog' });
     }
     
     const data = blogSchema.partial().parse(req.body);
@@ -290,35 +167,10 @@ router.patch('/:id', logActivity('UPDATE_BLOG', 'Blog'), async (req: AuthRequest
       editHistory: updatedHistory
     };
     
-    // If a MARKETING_MANAGER edits an approved blog, set it back to PENDING for re-approval
-    // PENDING blogs remain PENDING when edited
-    if (blog.status === 'APPROVED' && req.user!.role === 'MARKETING_MANAGER') {
-      updateData.status = 'PENDING';
-      updateData.approvedById = null;
-      updateData.publishedAt = null;
-    }
+    await updateBlog(req.params.id, updateData);
     
-    const updatedBlog = await prisma.blog.update({
-      where: { id: req.params.id },
-      data: updateData,
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    // Fetch updated blog with relations
+    const updatedBlog = await findBlogById(req.params.id);
     
     res.json({ blog: updatedBlog });
   } catch (error: any) {
@@ -329,20 +181,16 @@ router.patch('/:id', logActivity('UPDATE_BLOG', 'Blog'), async (req: AuthRequest
   }
 });
 
-// Delete blog (Admin only)
-router.delete('/:id', requireRole('ADMIN'), logActivity('DELETE_BLOG', 'Blog'), async (req: AuthRequest, res: Response) => {
+// Delete blog
+router.delete('/:id', logActivity('DELETE_BLOG', 'Blog'), async (req: AuthRequest, res: Response) => {
   try {
-    const blog = await prisma.blog.findUnique({
-      where: { id: req.params.id }
-    });
+    const blog = await findBlogById(req.params.id);
     
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
     
-    await prisma.blog.delete({
-      where: { id: req.params.id }
-    });
+    await deleteBlog(req.params.id);
     
     res.json({ message: 'Blog deleted successfully' });
   } catch (error: any) {
@@ -350,14 +198,12 @@ router.delete('/:id', requireRole('ADMIN'), logActivity('DELETE_BLOG', 'Blog'), 
   }
 });
 
-// Update blog status (Admin only)
-router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_BLOG_STATUS', 'Blog'), async (req: AuthRequest, res: Response) => {
+// Update blog status
+router.patch('/:id/status', logActivity('UPDATE_BLOG_STATUS', 'Blog'), async (req: AuthRequest, res: Response) => {
   try {
     const { status } = statusSchema.parse(req.body);
     
-    const blog = await prisma.blog.findUnique({
-      where: { id: req.params.id }
-    });
+    const blog = await findBlogById(req.params.id);
     
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
@@ -365,35 +211,17 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_BLOG_STATU
     
     const updateData: any = {
       status,
-      // keep original approver for DISABLED content so history is preserved
-      approvedById: status === 'APPROVED' ? req.user!.id : blog.approvedById
+      approvedById: status === 'APPROVED' ? await getAdminUserId() : blog.approvedById
     };
     
     if (status === 'APPROVED' && !blog.publishedAt) {
       updateData.publishedAt = new Date();
     }
     
-    const updatedBlog = await prisma.blog.update({
-      where: { id: req.params.id },
-      data: updateData,
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    await updateBlog(req.params.id, updateData);
+    
+    // Fetch updated blog with relations
+    const updatedBlog = await findBlogById(req.params.id);
     
     res.json({ blog: updatedBlog });
   } catch (error: any) {
@@ -404,8 +232,8 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_BLOG_STATU
   }
 });
 
-// Bulk update blog status (Admin only)
-router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_BLOG_STATUS', 'Blog'), async (req: AuthRequest, res: Response) => {
+// Bulk update blog status
+router.patch('/bulk/status', logActivity('BULK_UPDATE_BLOG_STATUS', 'Blog'), async (req: AuthRequest, res: Response) => {
   try {
     const bodySchema = z.object({
       ids: z.array(z.string().uuid()).min(1, 'At least one blog id is required'),
@@ -414,24 +242,13 @@ router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_BLOG
 
     const { ids, status } = bodySchema.parse(req.body);
 
-    const updateData: any = {
-      status,
-      approvedById: status === 'APPROVED' ? req.user!.id : null
-    };
+    const approvedById = status === 'APPROVED' ? await getAdminUserId() : null;
+    const publishedAt = status === 'APPROVED' ? new Date() : null;
 
-    if (status === 'APPROVED') {
-      updateData.publishedAt = new Date();
-    } else {
-      updateData.publishedAt = null;
-    }
-
-    const result = await prisma.blog.updateMany({
-      where: { id: { in: ids } },
-      data: updateData
-    });
+    const updatedCount = await bulkUpdateBlogStatus(ids, status, approvedById, publishedAt);
 
     res.json({
-      updatedCount: result.count
+      updatedCount
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

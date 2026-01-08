@@ -1,16 +1,18 @@
 import { Response, NextFunction } from 'express';
-import { prisma } from '../lib/prisma';
+import { createActivityLog } from '../db/queries';
 import { AuthRequest } from './authenticate';
+import { getAdminUserId } from '../utils/adminUser';
 
 export const logActivity = (action: string, entityType?: string) => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     const originalJson = res.json;
     
     res.json = function(data: any) {
-      if (res.statusCode >= 200 && res.statusCode < 400 && req.user) {
-        prisma.activityLog.create({
-          data: {
-            userId: req.user.id,
+      if (res.statusCode >= 200 && res.statusCode < 400) {
+        // Use admin user ID for activity logs
+        getAdminUserId().then(adminId => {
+          createActivityLog({
+            userId: adminId,
             action,
             entityType: entityType || null,
             entityId: req.params.id || data?.id || null,
@@ -18,10 +20,10 @@ export const logActivity = (action: string, entityType?: string) => {
               method: req.method,
               path: req.path,
               body: req.body
-            } as any,
+            },
             ipAddress: req.ip,
             userAgent: req.get('user-agent') || null
-          }
+          }).catch(console.error);
         }).catch(console.error);
       }
       
@@ -31,4 +33,3 @@ export const logActivity = (action: string, entityType?: string) => {
     next();
   };
 };
-

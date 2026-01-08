@@ -200,7 +200,7 @@ export default function NewslettersPage() {
             <div className="text-center py-8 text-muted-foreground">No newsletters found</div>
           ) : (
             <div className="space-y-4">
-            {user?.role === 'ADMIN' && (
+            {(
               <div className="flex items-center justify-between mb-2 text-sm text-muted-foreground">
                 <div>
                   {hasSelection
@@ -250,7 +250,7 @@ export default function NewslettersPage() {
                 >
                   <div
                     className="flex-1 cursor-pointer"
-                    onClick={() => user?.role === 'ADMIN' && toggleSelect(newsletter.id)}
+                    onClick={() => toggleSelect(newsletter.id)}
                   >
                     <div className="flex items-center gap-3">
                       <Link
@@ -298,7 +298,7 @@ export default function NewslettersPage() {
                     </Button>
                     
                     {/* Status management buttons - ADMIN only */}
-                    {user?.role === 'ADMIN' && (
+                    {(
                       <>
                         {newsletter.status === 'PENDING' && (
                           <>

@@ -1,12 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { RoleGuard } from './components/auth/RoleGuard';
 import { AppLayout } from './components/layout/AppLayout';
 
 // Pages
-import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import BlogsPage from './pages/blogs/BlogsPage';
 import CreateBlog from './pages/blogs/CreateBlog';
@@ -16,10 +12,6 @@ import NewslettersPage from './pages/newsletters/NewslettersPage';
 import CreateNewsletter from './pages/newsletters/CreateNewsletter';
 import EditNewsletter from './pages/newsletters/EditNewsletter';
 import ViewNewsletter from './pages/newsletters/ViewNewsletter';
-import UsersPage from './pages/users/UsersPage';
-import CreateUser from './pages/users/CreateUser';
-import EditUser from './pages/users/EditUser';
-import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -27,12 +19,7 @@ function App() {
       {/* Root Route */}
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-      {/* Protected Routes */}
+      {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -49,35 +36,6 @@ function App() {
           <Route path="newsletters/create" element={<CreateNewsletter />} />
           <Route path="newsletters/:id/edit" element={<EditNewsletter />} />
           <Route path="newsletters/:id/view" element={<ViewNewsletter />} />
-
-          {/* Users - Admin Only */}
-          <Route
-            path="users"
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <UsersPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="users/create"
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <CreateUser />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="users/:id/edit"
-            element={
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <EditUser />
-              </RoleGuard>
-            }
-          />
-
-          {/* Profile - All Roles */}
-          <Route path="profile" element={<Profile />} />
         </Route>
       </Route>
 

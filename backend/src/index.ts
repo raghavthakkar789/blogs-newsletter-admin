@@ -6,8 +6,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Routes
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
 import blogRoutes from './routes/blogs';
 import newsletterRoutes from './routes/newsletters';
 import analyticsRoutes from './routes/analytics';
@@ -58,13 +56,8 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/newsletters', newsletterRoutes);
-// Admin aliases for CMS management
-app.use('/api/admin/blogs', blogRoutes);
-app.use('/api/admin/newsletters', newsletterRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/generate-blog-content', generateBlogContentRoutes);

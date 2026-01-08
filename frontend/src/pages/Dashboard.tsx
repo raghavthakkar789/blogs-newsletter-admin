@@ -145,7 +145,7 @@ export default function Dashboard() {
           Welcome back, {user.firstName || 'User'}! 👋
         </h1>
         <p className="mt-2 text-primary-foreground/80">
-          {user.role === 'ADMIN' ? 'Manage your content and users' : 'Create and manage your content'}
+          Manage your content
         </p>
       </div>
 
@@ -219,7 +219,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {user?.role === 'ADMIN' && stats.users && (
+        {false && stats.users && (
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -261,7 +261,7 @@ export default function Dashboard() {
               <Mail className="h-8 w-8 mb-2" />
               Create Newsletter
             </Button>
-            {user?.role === 'ADMIN' && (
+            {(
               <>
                 <Button
                   onClick={() => navigate('/admin/users/create')}

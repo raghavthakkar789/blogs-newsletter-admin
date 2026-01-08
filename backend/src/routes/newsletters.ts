@@ -1,10 +1,16 @@
-import { Router, Response, Request } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/authenticate';
 import { logActivity } from '../middleware/logActivity';
-import { requireRole } from '../middleware/requireRole';
-import { canAccessNewsletter, canEditNewsletter, canDeleteNewsletter } from '../utils/accessControl';
+import { getAdminUserId } from '../utils/adminUser';
+import {
+  findNewsletters,
+  findNewsletterById,
+  createNewsletter,
+  updateNewsletter,
+  deleteNewsletter,
+  bulkUpdateNewsletterStatus,
+} from '../db/queries';
 
 const router = Router();
 
@@ -24,63 +30,6 @@ const statusSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DISABLED'])
 });
 
-// Public GET: list approved newsletters
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string | undefined;
-    
-    const where: any = {
-      status: 'APPROVED'
-    };
-    
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-        { summary: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-    
-    const [newsletters, total] = await Promise.all([
-      prisma.newsletter.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.newsletter.count({ where })
-    ]);
-    
-    res.json({
-      newsletters,
-      total,
-      page,
-      totalPages: Math.ceil(total / limit)
-    });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message || 'Internal server error' });
-  }
-});
-
-// Public GET: single approved newsletter
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const newsletter = await prisma.newsletter.findFirst({
-      where: { id: req.params.id, status: 'APPROVED' }
-    });
-    
-    if (!newsletter) {
-      return res.status(404).json({ message: 'Newsletter not found' });
-    }
-    
-    res.json({ newsletter });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message || 'Internal server error' });
-  }
-});
-
 // Authenticated routes for admin/marketing UI
 router.use(authenticate);
 
@@ -93,61 +42,18 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     const createdById = req.query.createdById as string | undefined;
     const search = req.query.search as string | undefined;
     
-    const where: any = {};
-    const andConditions: any[] = [];
-    
-    // Both ADMIN and MARKETING_MANAGER can see all newsletters
-    // Apply filters normally
+    const filters: any = {};
     if (status && status !== 'all') {
-      andConditions.push({ status });
+      filters.status = status as any;
     }
-    
     if (createdById) {
-      andConditions.push({ createdById });
+      filters.createdById = createdById;
     }
-    
     if (search) {
-      andConditions.push({
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { content: { contains: search, mode: 'insensitive' } },
-          { summary: { contains: search, mode: 'insensitive' } }
-        ]
-      });
+      filters.search = search;
     }
     
-    if (andConditions.length > 0) {
-      where.AND = andConditions;
-    }
-    
-    console.log('Newsletters query where clause:', JSON.stringify(where, null, 2));
-    
-    const [newsletters, total] = await Promise.all([
-      prisma.newsletter.findMany({
-        where,
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          approvedBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true
-            }
-          }
-        },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { updatedAt: 'desc' }
-      }),
-      prisma.newsletter.count({ where })
-    ]);
+    const { newsletters, total } = await findNewsletters(page, limit, filters);
     
     res.json({
       newsletters,
@@ -157,7 +63,6 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error fetching newsletters:', error);
-    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message || 'Internal server error' });
   }
 });
@@ -165,33 +70,10 @@ router.get('/admin/internal', async (req: AuthRequest, res: Response) => {
 // Authenticated GET: single newsletter with access control
 router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const newsletter = await prisma.newsletter.findUnique({
-      where: { id: req.params.id },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    const newsletter = await findNewsletterById(req.params.id);
     
     if (!newsletter) {
       return res.status(404).json({ message: 'Newsletter not found' });
-    }
-    
-    if (!canAccessNewsletter(req.user!, newsletter)) {
-      return res.status(403).json({ message: 'Forbidden' });
     }
     
     res.json({ newsletter });
@@ -204,27 +86,27 @@ router.get('/admin/internal/:id', async (req: AuthRequest, res: Response) => {
 router.post('/', logActivity('CREATE_NEWSLETTER', 'Newsletter'), async (req: AuthRequest, res: Response) => {
   try {
     const data = newsletterSchema.parse(req.body);
+    const adminId = await getAdminUserId();
     
-    const newsletter = await prisma.newsletter.create({
-      data: {
-        ...data,
-        image: data.image || null,
-        createdById: req.user!.id,
-        status: 'PENDING'
-      },
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
+    const newsletter = await createNewsletter({
+      ...data,
+      tags: data.tags || [],
+      image: data.image || null,
+      createdById: adminId,
+      status: 'PENDING',
+      summary: data.summary || null,
+      category: data.category || null,
+      approvedById: null,
+      publishedAt: null,
+      editHistory: null,
+      lastEditedAt: null,
+      lastEditedBy: null,
     });
     
-    res.status(201).json({ newsletter });
+    // Fetch with relations for response
+    const newsletterWithRelations = await findNewsletterById(newsletter.id);
+    
+    res.status(201).json({ newsletter: newsletterWithRelations });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: error.errors[0].message });
@@ -236,16 +118,10 @@ router.post('/', logActivity('CREATE_NEWSLETTER', 'Newsletter'), async (req: Aut
 // Update newsletter
 router.patch('/:id', logActivity('UPDATE_NEWSLETTER', 'Newsletter'), async (req: AuthRequest, res: Response) => {
   try {
-    const newsletter = await prisma.newsletter.findUnique({
-      where: { id: req.params.id }
-    });
+    const newsletter = await findNewsletterById(req.params.id);
     
     if (!newsletter) {
       return res.status(404).json({ message: 'Newsletter not found' });
-    }
-    
-    if (!canEditNewsletter(req.user!, newsletter)) {
-      return res.status(403).json({ message: 'Forbidden: Cannot edit this newsletter' });
     }
     
     const data = newsletterSchema.partial().parse(req.body);
@@ -289,36 +165,10 @@ router.patch('/:id', logActivity('UPDATE_NEWSLETTER', 'Newsletter'), async (req:
       editHistory: updatedHistory
     };
     
-    // If a MARKETING_MANAGER edits a non-pending newsletter, set it back to PENDING for re-approval
-    // PENDING newsletters remain PENDING when edited
-    // REJECTED and DISABLED newsletters go back to PENDING when edited by MARKETING_MANAGER
-    if (newsletter.status !== 'PENDING' && req.user!.role === 'MARKETING_MANAGER') {
-      updateData.status = 'PENDING';
-      updateData.approvedById = null;
-      updateData.publishedAt = null;
-    }
+    await updateNewsletter(req.params.id, updateData);
     
-    const updatedNewsletter = await prisma.newsletter.update({
-      where: { id: req.params.id },
-      data: updateData,
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    // Fetch updated newsletter with relations
+    const updatedNewsletter = await findNewsletterById(req.params.id);
     
     res.json({ newsletter: updatedNewsletter });
   } catch (error: any) {
@@ -329,20 +179,16 @@ router.patch('/:id', logActivity('UPDATE_NEWSLETTER', 'Newsletter'), async (req:
   }
 });
 
-// Delete newsletter (Admin only)
-router.delete('/:id', requireRole('ADMIN'), logActivity('DELETE_NEWSLETTER', 'Newsletter'), async (req: AuthRequest, res: Response) => {
+// Delete newsletter
+router.delete('/:id', logActivity('DELETE_NEWSLETTER', 'Newsletter'), async (req: AuthRequest, res: Response) => {
   try {
-    const newsletter = await prisma.newsletter.findUnique({
-      where: { id: req.params.id }
-    });
+    const newsletter = await findNewsletterById(req.params.id);
     
     if (!newsletter) {
       return res.status(404).json({ message: 'Newsletter not found' });
     }
     
-    await prisma.newsletter.delete({
-      where: { id: req.params.id }
-    });
+    await deleteNewsletter(req.params.id);
     
     res.json({ message: 'Newsletter deleted successfully' });
   } catch (error: any) {
@@ -350,14 +196,12 @@ router.delete('/:id', requireRole('ADMIN'), logActivity('DELETE_NEWSLETTER', 'Ne
   }
 });
 
-// Update newsletter status (Admin only)
-router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER_STATUS', 'Newsletter'), async (req: AuthRequest, res: Response) => {
+// Update newsletter status
+router.patch('/:id/status', logActivity('UPDATE_NEWSLETTER_STATUS', 'Newsletter'), async (req: AuthRequest, res: Response) => {
   try {
     const { status } = statusSchema.parse(req.body);
     
-    const newsletter = await prisma.newsletter.findUnique({
-      where: { id: req.params.id }
-    });
+    const newsletter = await findNewsletterById(req.params.id);
     
     if (!newsletter) {
       return res.status(404).json({ message: 'Newsletter not found' });
@@ -365,34 +209,17 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER
     
     const updateData: any = {
       status,
-      approvedById: status === 'APPROVED' ? req.user!.id : newsletter.approvedById
+      approvedById: status === 'APPROVED' ? await getAdminUserId() : newsletter.approvedById
     };
     
     if (status === 'APPROVED' && !newsletter.publishedAt) {
       updateData.publishedAt = new Date();
     }
     
-    const updatedNewsletter = await prisma.newsletter.update({
-      where: { id: req.params.id },
-      data: updateData,
-      include: {
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true
-          }
-        }
-      }
-    });
+    await updateNewsletter(req.params.id, updateData);
+    
+    // Fetch updated newsletter with relations
+    const updatedNewsletter = await findNewsletterById(req.params.id);
     
     res.json({ newsletter: updatedNewsletter });
   } catch (error: any) {
@@ -403,8 +230,8 @@ router.patch('/:id/status', requireRole('ADMIN'), logActivity('UPDATE_NEWSLETTER
   }
 });
 
-// Bulk update newsletter status (Admin only)
-router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_NEWSLETTER_STATUS', 'Newsletter'), async (req: AuthRequest, res: Response) => {
+// Bulk update newsletter status
+router.patch('/bulk/status', logActivity('BULK_UPDATE_NEWSLETTER_STATUS', 'Newsletter'), async (req: AuthRequest, res: Response) => {
   try {
     const bodySchema = z.object({
       ids: z.array(z.string().uuid()).min(1, 'At least one newsletter id is required'),
@@ -413,24 +240,13 @@ router.patch('/bulk/status', requireRole('ADMIN'), logActivity('BULK_UPDATE_NEWS
 
     const { ids, status } = bodySchema.parse(req.body);
 
-    const updateData: any = {
-      status,
-      approvedById: status === 'APPROVED' ? req.user!.id : null
-    };
+    const approvedById = status === 'APPROVED' ? await getAdminUserId() : null;
+    const publishedAt = status === 'APPROVED' ? new Date() : null;
 
-    if (status === 'APPROVED') {
-      updateData.publishedAt = new Date();
-    } else {
-      updateData.publishedAt = null;
-    }
-
-    const result = await prisma.newsletter.updateMany({
-      where: { id: { in: ids } },
-      data: updateData
-    });
+    const updatedCount = await bulkUpdateNewsletterStatus(ids, status, approvedById, publishedAt);
 
     res.json({
-      updatedCount: result.count
+      updatedCount
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

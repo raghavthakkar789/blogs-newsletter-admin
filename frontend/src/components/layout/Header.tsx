@@ -8,9 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, User, LogOut, Menu } from 'lucide-react';
+import { Bell, LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { authService } from '@/services/api';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -23,7 +22,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
   const handleLogout = async () => {
     await logout();
-    await authService.logout();
     navigate('/login');
   };
 
@@ -78,11 +76,6 @@ export function Header({ onMenuToggle }: HeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => navigate('/admin/profile')}>
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout

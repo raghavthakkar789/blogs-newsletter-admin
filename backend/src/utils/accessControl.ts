@@ -1,4 +1,4 @@
-import { Blog, Newsletter } from '@prisma/client';
+import { Blog, Newsletter } from '../types/database';
 
 type AccessUser = {
   id: string;
@@ -36,4 +36,3 @@ export const canEditNewsletter = (user: AccessUser, newsletter: Newsletter): boo
 export const canDeleteNewsletter = (user: AccessUser, newsletter: Newsletter): boolean => {
   return user.role === 'ADMIN';
 };
-
