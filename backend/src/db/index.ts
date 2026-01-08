@@ -4,44 +4,55 @@
  * Provides a single shared PostgreSQL connection pool.
  * Uses DATABASE_URL from environment variables.
  * All database operations use this pool to prevent connection leaks.
+ * 
+ * Note: In NestJS, environment variables are loaded by ConfigModule.
+ * This file is used by queries.ts which may be imported before NestJS initialization.
+ * Ensure DATABASE_URL is set in your environment or .env file.
  */
 
-import dotenv from 'dotenv';
 import { Pool, PoolClient, QueryResult } from 'pg';
 
-dotenv.config();
+// Lazy initialization - pool is created on first use
+// This allows NestJS ConfigModule to load .env file first
+let pool: Pool | null = null;
 
-// Get DATABASE_URL from environment
-const databaseUrl = process.env.DATABASE_URL;
+function getPool(): Pool {
+  if (!pool) {
+    // Get DATABASE_URL from environment (loaded by NestJS ConfigModule)
+    const databaseUrl = process.env.DATABASE_URL;
 
-if (!databaseUrl) {
-  throw new Error(
-    'DATABASE_URL environment variable is not set. Please check your .env file.'
-  );
+    if (!databaseUrl) {
+      throw new Error(
+        'DATABASE_URL environment variable is not set. Please check your .env file.'
+      );
+    }
+
+    // Validate connection string format
+    if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
+      throw new Error(
+        'DATABASE_URL must start with postgresql:// or postgres://. Current value: ' + 
+        (databaseUrl.substring(0, 20) + '...')
+      );
+    }
+
+    // Create a single shared connection pool
+    // Pool configuration optimized for production use
+    pool = new Pool({
+      connectionString: databaseUrl,
+      // Connection pool settings
+      max: 20, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+      connectionTimeoutMillis: 2000, // Return error after 2 seconds if connection cannot be established
+    });
+
+    // Handle pool errors (don't exit process, just log)
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle database client', err);
+    });
+  }
+  
+  return pool;
 }
-
-// Validate connection string format
-if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
-  throw new Error(
-    'DATABASE_URL must start with postgresql:// or postgres://. Current value: ' + 
-    (databaseUrl.substring(0, 20) + '...')
-  );
-}
-
-// Create a single shared connection pool
-// Pool configuration optimized for production use
-const pool = new Pool({
-  connectionString: databaseUrl,
-  // Connection pool settings
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return error after 2 seconds if connection cannot be established
-});
-
-// Handle pool errors (don't exit process, just log)
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle database client', err);
-});
 
 /**
  * Execute a parameterized query using the connection pool
@@ -53,9 +64,10 @@ export async function query<T extends Record<string, any> = any>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> {
+  const poolInstance = getPool();
   const start = Date.now();
   try {
-    const result = await pool.query<T>(text, params);
+    const result = await poolInstance.query<T>(text, params);
     const duration = Date.now() - start;
     
     // Log slow queries in development
@@ -79,7 +91,7 @@ export async function query<T extends Record<string, any> = any>(
  * @returns Promise resolving to a pool client
  */
 export async function getClient(): Promise<PoolClient> {
-  return await pool.connect();
+  return await getPool().connect();
 }
 
 /**
@@ -111,8 +123,11 @@ export async function transaction<T>(
  * Call this when the application is shutting down
  */
 export async function closePool(): Promise<void> {
-  await pool.end();
-  console.log('Database connection pool closed');
+  if (pool) {
+    await pool.end();
+    pool = null;
+    console.log('Database connection pool closed');
+  }
 }
 
 // Handle graceful shutdown
@@ -126,16 +141,7 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Test connection on module load
-pool.query('SELECT NOW()')
-  .then(() => {
-    console.log('✅ Database connection pool initialized successfully');
-  })
-  .catch((error) => {
-    console.error('❌ Failed to connect to database:', error.message);
-    console.error('Please check your DATABASE_URL in .env file');
-  });
-
-export { pool };
-export default pool;
+// Export pool getter for external access if needed
+export { getPool as pool };
+export default getPool;
 

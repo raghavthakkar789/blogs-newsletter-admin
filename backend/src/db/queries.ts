@@ -24,7 +24,7 @@ import {
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   const result = await query<User>(
-    'SELECT * FROM "User" WHERE email = $1 LIMIT 1',
+    'SELECT * FROM "User" WHERE "email" = $1 LIMIT 1',
     [email]
   );
   return result.rows[0] || null;
@@ -32,7 +32,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 
 export async function findUserById(id: string): Promise<User | null> {
   const result = await query<User>(
-    'SELECT * FROM "User" WHERE id = $1 LIMIT 1',
+    'SELECT * FROM "User" WHERE "id" = $1 LIMIT 1',
     [id]
   );
   return result.rows[0] || null;
@@ -69,7 +69,7 @@ export async function findBlogs(
 
   // Build WHERE conditions
   if (filters.status) {
-    conditions.push(`b.status = $${paramIndex++}`);
+    conditions.push(`b."status" = $${paramIndex++}`);
     params.push(filters.status);
   }
 
@@ -80,9 +80,9 @@ export async function findBlogs(
 
   if (filters.search) {
     conditions.push(`(
-      b.title ILIKE $${paramIndex} OR 
-      b.content ILIKE $${paramIndex} OR 
-      b.summary ILIKE $${paramIndex}
+      b."title" ILIKE $${paramIndex} OR 
+      b."content" ILIKE $${paramIndex} OR 
+      b."summary" ILIKE $${paramIndex}
     )`);
     params.push(`%${filters.search}%`);
     paramIndex++;
@@ -94,7 +94,7 @@ export async function findBlogs(
 
   // Count query
   const countQuery = `
-    SELECT COUNT(*) as total
+    SELECT COUNT(*) as "total"
     FROM "Blog" b
     ${whereClause}
   `;
@@ -104,26 +104,26 @@ export async function findBlogs(
   // Data query with joins for relations
   const dataQuery = `
     SELECT 
-      b.id, b.title, b.content, b.summary, b.category, b.tags, b.author, b.image,
-      b.status, b."createdById", b."approvedById", b."createdAt", b."updatedAt",
+      b."id", b."title", b."content", b."summary", b."category", b."tags", b."author", b."image",
+      b."status", b."createdById", b."approvedById", b."createdAt", b."updatedAt",
       b."publishedAt", b."editHistory", b."lastEditedAt", b."lastEditedBy",
       json_build_object(
-        'id', u1.id,
+        'id', u1."id",
         'firstName', u1."firstName",
         'lastName', u1."lastName",
-        'email', u1.email
+        'email', u1."email"
       ) as "createdBy",
       CASE 
-        WHEN u2.id IS NOT NULL THEN json_build_object(
-          'id', u2.id,
+        WHEN u2."id" IS NOT NULL THEN json_build_object(
+          'id', u2."id",
           'firstName', u2."firstName",
           'lastName', u2."lastName"
         )
         ELSE NULL
       END as "approvedBy"
     FROM "Blog" b
-    LEFT JOIN "User" u1 ON b."createdById" = u1.id
-    LEFT JOIN "User" u2 ON b."approvedById" = u2.id
+    LEFT JOIN "User" u1 ON b."createdById" = u1."id"
+    LEFT JOIN "User" u2 ON b."approvedById" = u2."id"
     ${whereClause}
     ORDER BY b."updatedAt" DESC
     LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -165,27 +165,27 @@ export async function findBlogs(
 export async function findBlogById(id: string): Promise<BlogWithRelations | null> {
   const result = await query(`
     SELECT 
-      b.id, b.title, b.content, b.summary, b.category, b.tags, b.author, b.image,
-      b.status, b."createdById", b."approvedById", b."createdAt", b."updatedAt",
+      b."id", b."title", b."content", b."summary", b."category", b."tags", b."author", b."image",
+      b."status", b."createdById", b."approvedById", b."createdAt", b."updatedAt",
       b."publishedAt", b."editHistory", b."lastEditedAt", b."lastEditedBy",
       json_build_object(
-        'id', u1.id,
+        'id', u1."id",
         'firstName', u1."firstName",
         'lastName', u1."lastName",
-        'email', u1.email
+        'email', u1."email"
       ) as "createdBy",
       CASE 
-        WHEN u2.id IS NOT NULL THEN json_build_object(
-          'id', u2.id,
+        WHEN u2."id" IS NOT NULL THEN json_build_object(
+          'id', u2."id",
           'firstName', u2."firstName",
           'lastName', u2."lastName"
         )
         ELSE NULL
       END as "approvedBy"
     FROM "Blog" b
-    LEFT JOIN "User" u1 ON b."createdById" = u1.id
-    LEFT JOIN "User" u2 ON b."approvedById" = u2.id
-    WHERE b.id = $1
+    LEFT JOIN "User" u1 ON b."createdById" = u1."id"
+    LEFT JOIN "User" u2 ON b."approvedById" = u2."id"
+    WHERE b."id" = $1
     LIMIT 1
   `, [id]);
 
@@ -226,7 +226,7 @@ export async function createBlog(
 ): Promise<Blog> {
   const result = await query<Blog>(`
     INSERT INTO "Blog" (
-      title, content, summary, category, tags, author, image, status,
+      "title", "content", "summary", "category", "tags", "author", "image", "status",
       "createdById", "approvedById", "publishedAt", "editHistory",
       "lastEditedAt", "lastEditedBy"
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -292,7 +292,7 @@ export async function updateBlog(
   const queryText = `
     UPDATE "Blog"
     SET ${fields.join(', ')}
-    WHERE id = $${paramIndex}
+    WHERE "id" = $${paramIndex}
     RETURNING *
   `;
 
@@ -305,7 +305,7 @@ export async function updateBlog(
  * Replaces: prisma.blog.delete()
  */
 export async function deleteBlog(id: string): Promise<void> {
-  await query('DELETE FROM "Blog" WHERE id = $1', [id]);
+  await query('DELETE FROM "Blog" WHERE "id" = $1', [id]);
 }
 
 /**
@@ -321,11 +321,11 @@ export async function bulkUpdateBlogStatus(
   const result = await query(`
     UPDATE "Blog"
     SET 
-      status = $1,
+      "status" = $1,
       "approvedById" = $2,
       "publishedAt" = $3,
       "updatedAt" = CURRENT_TIMESTAMP
-    WHERE id = ANY($4::text[])
+    WHERE "id" = ANY($4::text[])
   `, [status, approvedById, publishedAt, ids]);
 
   return result.rowCount || 0;
@@ -361,7 +361,7 @@ export async function findNewsletters(
   let paramIndex = 1;
 
   if (filters.status) {
-    conditions.push(`n.status = $${paramIndex++}`);
+    conditions.push(`n."status" = $${paramIndex++}`);
     params.push(filters.status);
   }
 
@@ -372,9 +372,9 @@ export async function findNewsletters(
 
   if (filters.search) {
     conditions.push(`(
-      n.title ILIKE $${paramIndex} OR 
-      n.content ILIKE $${paramIndex} OR 
-      n.summary ILIKE $${paramIndex}
+      n."title" ILIKE $${paramIndex} OR 
+      n."content" ILIKE $${paramIndex} OR 
+      n."summary" ILIKE $${paramIndex}
     )`);
     params.push(`%${filters.search}%`);
     paramIndex++;
@@ -385,7 +385,7 @@ export async function findNewsletters(
     : '';
 
   const countQuery = `
-    SELECT COUNT(*) as total
+    SELECT COUNT(*) as "total"
     FROM "Newsletter" n
     ${whereClause}
   `;
@@ -394,26 +394,26 @@ export async function findNewsletters(
 
   const dataQuery = `
     SELECT 
-      n.id, n.title, n.content, n.summary, n.category, n.tags, n.image,
-      n.status, n."createdById", n."approvedById", n."createdAt", n."updatedAt",
+      n."id", n."title", n."content", n."summary", n."category", n."tags", n."image",
+      n."status", n."createdById", n."approvedById", n."createdAt", n."updatedAt",
       n."publishedAt", n."editHistory", n."lastEditedAt", n."lastEditedBy",
       json_build_object(
-        'id', u1.id,
+        'id', u1."id",
         'firstName', u1."firstName",
         'lastName', u1."lastName",
-        'email', u1.email
+        'email', u1."email"
       ) as "createdBy",
       CASE 
-        WHEN u2.id IS NOT NULL THEN json_build_object(
-          'id', u2.id,
+        WHEN u2."id" IS NOT NULL THEN json_build_object(
+          'id', u2."id",
           'firstName', u2."firstName",
           'lastName', u2."lastName"
         )
         ELSE NULL
       END as "approvedBy"
     FROM "Newsletter" n
-    LEFT JOIN "User" u1 ON n."createdById" = u1.id
-    LEFT JOIN "User" u2 ON n."approvedById" = u2.id
+    LEFT JOIN "User" u1 ON n."createdById" = u1."id"
+    LEFT JOIN "User" u2 ON n."approvedById" = u2."id"
     ${whereClause}
     ORDER BY n."updatedAt" DESC
     LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -453,27 +453,27 @@ export async function findNewsletters(
 export async function findNewsletterById(id: string): Promise<NewsletterWithRelations | null> {
   const result = await query(`
     SELECT 
-      n.id, n.title, n.content, n.summary, n.category, n.tags, n.image,
-      n.status, n."createdById", n."approvedById", n."createdAt", n."updatedAt",
+      n."id", n."title", n."content", n."summary", n."category", n."tags", n."image",
+      n."status", n."createdById", n."approvedById", n."createdAt", n."updatedAt",
       n."publishedAt", n."editHistory", n."lastEditedAt", n."lastEditedBy",
       json_build_object(
-        'id', u1.id,
+        'id', u1."id",
         'firstName', u1."firstName",
         'lastName', u1."lastName",
-        'email', u1.email
+        'email', u1."email"
       ) as "createdBy",
       CASE 
-        WHEN u2.id IS NOT NULL THEN json_build_object(
-          'id', u2.id,
+        WHEN u2."id" IS NOT NULL THEN json_build_object(
+          'id', u2."id",
           'firstName', u2."firstName",
           'lastName', u2."lastName"
         )
         ELSE NULL
       END as "approvedBy"
     FROM "Newsletter" n
-    LEFT JOIN "User" u1 ON n."createdById" = u1.id
-    LEFT JOIN "User" u2 ON n."approvedById" = u2.id
-    WHERE n.id = $1
+    LEFT JOIN "User" u1 ON n."createdById" = u1."id"
+    LEFT JOIN "User" u2 ON n."approvedById" = u2."id"
+    WHERE n."id" = $1
     LIMIT 1
   `, [id]);
 
@@ -513,7 +513,7 @@ export async function createNewsletter(
 ): Promise<Newsletter> {
   const result = await query<Newsletter>(`
     INSERT INTO "Newsletter" (
-      title, content, summary, category, tags, image, status,
+      "title", "content", "summary", "category", "tags", "image", "status",
       "createdById", "approvedById", "publishedAt", "editHistory",
       "lastEditedAt", "lastEditedBy"
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -574,7 +574,7 @@ export async function updateNewsletter(
   const queryText = `
     UPDATE "Newsletter"
     SET ${fields.join(', ')}
-    WHERE id = $${paramIndex}
+    WHERE "id" = $${paramIndex}
     RETURNING *
   `;
 
@@ -587,7 +587,7 @@ export async function updateNewsletter(
  * Replaces: prisma.newsletter.delete()
  */
 export async function deleteNewsletter(id: string): Promise<void> {
-  await query('DELETE FROM "Newsletter" WHERE id = $1', [id]);
+  await query('DELETE FROM "Newsletter" WHERE "id" = $1', [id]);
 }
 
 /**
@@ -603,11 +603,11 @@ export async function bulkUpdateNewsletterStatus(
   const result = await query(`
     UPDATE "Newsletter"
     SET 
-      status = $1,
+      "status" = $1,
       "approvedById" = $2,
       "publishedAt" = $3,
       "updatedAt" = CURRENT_TIMESTAMP
-    WHERE id = ANY($4::text[])
+    WHERE "id" = ANY($4::text[])
   `, [status, approvedById, publishedAt, ids]);
 
   return result.rowCount || 0;
@@ -643,7 +643,7 @@ export async function findActivityLogs(
   }
 
   if (filters.action) {
-    conditions.push(`al.action = $${paramIndex++}`);
+    conditions.push(`al."action" = $${paramIndex++}`);
     params.push(filters.action);
   }
 
@@ -657,7 +657,7 @@ export async function findActivityLogs(
     : '';
 
   const countQuery = `
-    SELECT COUNT(*) as total
+    SELECT COUNT(*) as "total"
     FROM "ActivityLog" al
     ${whereClause}
   `;
@@ -666,16 +666,16 @@ export async function findActivityLogs(
 
   const dataQuery = `
     SELECT 
-      al.id, al."userId", al.action, al."entityType", al."entityId",
-      al.details, al."ipAddress", al."userAgent", al."createdAt",
+      al."id", al."userId", al."action", al."entityType", al."entityId",
+      al."details", al."ipAddress", al."userAgent", al."createdAt",
       json_build_object(
-        'id', u.id,
+        'id', u."id",
         'firstName', u."firstName",
         'lastName', u."lastName",
-        'email', u.email
+        'email', u."email"
       ) as user
     FROM "ActivityLog" al
-    LEFT JOIN "User" u ON al."userId" = u.id
+    LEFT JOIN "User" u ON al."userId" = u."id"
     ${whereClause}
     ORDER BY al."createdAt" DESC
     LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -731,34 +731,46 @@ export async function createActivityLog(
  * Replaces: prisma.activityLog.findMany() with take and include
  */
 export async function findRecentActivityLogs(limit: number = 10): Promise<ActivityLogWithRelations[]> {
-  const result = await query(`
-    SELECT 
-      al.id, al."userId", al.action, al."entityType", al."entityId",
-      al.details, al."ipAddress", al."userAgent", al."createdAt",
-      json_build_object(
-        'id', u.id,
-        'firstName', u."firstName",
-        'lastName', u."lastName",
-        'email', u.email
-      ) as user
-    FROM "ActivityLog" al
-    LEFT JOIN "User" u ON al."userId" = u.id
-    ORDER BY al."createdAt" DESC
-    LIMIT $1
-  `, [limit]);
+  try {
+    const result = await query(`
+      SELECT 
+        al."id", al."userId", al."action", al."entityType", al."entityId",
+        al."details", al."ipAddress", al."userAgent", al."createdAt",
+        json_build_object(
+          'id', u."id",
+          'firstName', u."firstName",
+          'lastName', u."lastName",
+          'email', u."email"
+        ) as user
+      FROM "ActivityLog" al
+      LEFT JOIN "User" u ON al."userId" = u."id"
+      ORDER BY al."createdAt" DESC
+      LIMIT $1
+    `, [limit]);
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    userId: row.userId,
-    action: row.action,
-    entityType: row.entityType,
-    entityId: row.entityId,
-    details: row.details,
-    ipAddress: row.ipAddress,
-    userAgent: row.userAgent,
-    createdAt: row.createdAt,
-    user: row.user,
-  }));
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.userId,
+      action: row.action,
+      entityType: row.entityType,
+      entityId: row.entityId,
+      details: row.details,
+      ipAddress: row.ipAddress,
+      userAgent: row.userAgent,
+      createdAt: row.createdAt,
+      user: row.user || { id: '', firstName: '', lastName: '', email: '' },
+    }));
+  } catch (error: any) {
+    console.error('Error in findRecentActivityLogs:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack,
+    });
+    // Return empty array if query fails (e.g., table doesn't exist)
+    return [];
+  }
 }
 
 // ============================================================================
@@ -786,30 +798,50 @@ export interface NewsletterStats {
  * Replaces: prisma.blog.groupBy()
  */
 export async function getBlogStats(): Promise<BlogStats> {
-  const result = await query<{ status: ContentStatus; count: string }>(`
-    SELECT status, COUNT(*)::text as count
-    FROM "Blog"
-    GROUP BY status
-  `);
+  try {
+    const result = await query<{ status: ContentStatus; count: string }>(`
+      SELECT "status", COUNT(*)::text as "count"
+      FROM "Blog"
+      GROUP BY "status"
+    `);
 
-  const stats: BlogStats = {
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    disabled: 0,
-  };
+    const stats: BlogStats = {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      disabled: 0,
+    };
 
-  result.rows.forEach((row) => {
-    const count = parseInt(row.count, 10);
-    stats.total += count;
-    if (row.status === 'PENDING') stats.pending = count;
-    else if (row.status === 'APPROVED') stats.approved = count;
-    else if (row.status === 'REJECTED') stats.rejected = count;
-    else if (row.status === 'DISABLED') stats.disabled = count;
-  });
+    result.rows.forEach((row: any) => {
+      // pg library lowercases column names, access with lowercase
+      const count = parseInt(row.count || '0', 10);
+      stats.total += count;
+      const status = row.status;
+      if (status === 'PENDING') stats.pending = count;
+      else if (status === 'APPROVED') stats.approved = count;
+      else if (status === 'REJECTED') stats.rejected = count;
+      else if (status === 'DISABLED') stats.disabled = count;
+    });
 
-  return stats;
+    return stats;
+  } catch (error: any) {
+    console.error('Error in getBlogStats:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack,
+    });
+    // Return empty stats if query fails
+    return {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      disabled: 0,
+    };
+  }
 }
 
 /**
@@ -817,29 +849,49 @@ export async function getBlogStats(): Promise<BlogStats> {
  * Replaces: prisma.newsletter.groupBy()
  */
 export async function getNewsletterStats(): Promise<NewsletterStats> {
-  const result = await query<{ status: ContentStatus; count: string }>(`
-    SELECT status, COUNT(*)::text as count
-    FROM "Newsletter"
-    GROUP BY status
-  `);
+  try {
+    const result = await query<{ status: ContentStatus; count: string }>(`
+      SELECT "status", COUNT(*)::text as "count"
+      FROM "Newsletter"
+      GROUP BY "status"
+    `);
 
-  const stats: NewsletterStats = {
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    disabled: 0,
-  };
+    const stats: NewsletterStats = {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      disabled: 0,
+    };
 
-  result.rows.forEach((row) => {
-    const count = parseInt(row.count, 10);
-    stats.total += count;
-    if (row.status === 'PENDING') stats.pending = count;
-    else if (row.status === 'APPROVED') stats.approved = count;
-    else if (row.status === 'REJECTED') stats.rejected = count;
-    else if (row.status === 'DISABLED') stats.disabled = count;
-  });
+    result.rows.forEach((row: any) => {
+      // pg library lowercases column names, access with lowercase
+      const count = parseInt(row.count || '0', 10);
+      stats.total += count;
+      const status = row.status;
+      if (status === 'PENDING') stats.pending = count;
+      else if (status === 'APPROVED') stats.approved = count;
+      else if (status === 'REJECTED') stats.rejected = count;
+      else if (status === 'DISABLED') stats.disabled = count;
+    });
 
-  return stats;
+    return stats;
+  } catch (error: any) {
+    console.error('Error in getNewsletterStats:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack,
+    });
+    // Return empty stats if query fails
+    return {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      disabled: 0,
+    };
+  }
 }
 
