@@ -10,7 +10,7 @@ export interface EditHistoryEntry {
   changes: string[];
 }
 
-export interface TrackChangesOptions<T> {
+export interface TrackChangesOptions<T extends object> {
   oldEntity: T;
   newData: Partial<T>;
   fieldsToCheck: string[];
@@ -25,7 +25,7 @@ export interface TrackChangesOptions<T> {
  * Track changes between old entity and new data
  * Returns an edit history entry with the list of changed fields
  */
-export function trackChanges<T extends Record<string, unknown>>(
+export function trackChanges<T extends object>(
   options: TrackChangesOptions<T>
 ): EditHistoryEntry {
   const { oldEntity, newData, fieldsToCheck, user } = options;
@@ -56,7 +56,7 @@ export function trackChanges<T extends Record<string, unknown>>(
 /**
  * Build update data with edit history
  */
-export function buildUpdateDataWithHistory<T extends Record<string, unknown>>(
+export function buildUpdateDataWithHistory<T extends object>(
   updateDto: Partial<T>,
   existingHistory: EditHistoryEntry[] | null,
   editEntry: EditHistoryEntry,
