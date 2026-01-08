@@ -61,18 +61,18 @@ export function buildUpdateDataWithHistory<T extends Record<string, unknown>>(
   existingHistory: EditHistoryEntry[] | null,
   editEntry: EditHistoryEntry,
   imageField?: string
-): Partial<T & {
-  editHistory: EditHistoryEntry[] | null;
-  lastEditedAt: Date | null;
-  lastEditedBy: string | null;
-}> {
+): Partial<T> & {
+  editHistory: EditHistoryEntry[];
+  lastEditedAt: Date;
+  lastEditedBy: string;
+} {
   const updatedHistory = [...(existingHistory || []), editEntry];
   
-  const updateData: Partial<T & {
-    editHistory: EditHistoryEntry[] | null;
-    lastEditedAt: Date | null;
-    lastEditedBy: string | null;
-  }> = {
+  const updateData: Partial<T> & {
+    editHistory: EditHistoryEntry[];
+    lastEditedAt: Date;
+    lastEditedBy: string;
+  } = {
     ...updateDto,
     lastEditedBy: editEntry.userName,
     lastEditedAt: new Date(),
