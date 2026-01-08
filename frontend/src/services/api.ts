@@ -139,10 +139,10 @@ export const analyticsService = {
 
 // Upload
 export const uploadService = {
-  uploadFile: async (file: File): Promise<{ url: string; filename: string }> => {
+  uploadFile: async (file: File, folder: 'blogs' | 'newsletters' = 'blogs'): Promise<{ url: string; filename: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/upload', formData, {
+    const response = await api.post(`/upload?folder=${folder}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

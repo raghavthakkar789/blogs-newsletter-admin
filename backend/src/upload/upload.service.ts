@@ -1,50 +1,33 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
-import { FileUploadDto } from './dto/file-upload.dto';
+import { S3Service, UploadFolder } from './s3.service';
 
 @Injectable()
 export class UploadService {
-  private uploadDir: string;
+  constructor(private s3Service: S3Service) {}
 
-  constructor(private configService: ConfigService) {
-    this.uploadDir = this.configService.get<string>('UPLOAD_DIR', './uploads');
-    
-    // Ensure upload directory exists
-    if (!fs.existsSync(this.uploadDir)) {
-      fs.mkdirSync(this.uploadDir, { recursive: true });
-    }
+  /**
+   * Upload file to S3 for blogs
+   */
+  async uploadFileForBlogs(file: Express.Multer.File): Promise<{ url: string; filename: string }> {
+    return await this.s3Service.uploadFile(file, 'blogs');
   }
 
-  async uploadFile(file: Express.Multer.File): Promise<{ url: string; filename: string }> {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
+  /**
+   * Upload file to S3 for newsletters
+   */
+  async uploadFileForNewsletters(file: Express.Multer.File): Promise<{ url: string; filename: string }> {
+    return await this.s3Service.uploadFile(file, 'newsletters');
+  }
+
+  /**
+   * Upload file to S3 (generic - requires folder parameter)
+   * @deprecated Use uploadFileForBlogs or uploadFileForNewsletters instead
+   */
+  async uploadFile(file: Express.Multer.File, folder?: UploadFolder): Promise<{ url: string; filename: string }> {
+    if (!folder) {
+      throw new BadRequestException('Folder type is required. Use uploadFileForBlogs or uploadFileForNewsletters.');
     }
-
-    // Validate file type - accept all image types
-    if (!file.mimetype.startsWith('image/')) {
-      throw new BadRequestException('Invalid file type. Only images are allowed.');
-    }
-
-    // Sanitize filename
-    const sanitized = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const timestamp = Date.now();
-    const ext = path.extname(sanitized);
-    const name = path.basename(sanitized, ext);
-    const filename = `${timestamp}-${name}${ext}`;
-    const filepath = path.join(this.uploadDir, filename);
-
-    // Save file
-    fs.writeFileSync(filepath, file.buffer);
-
-    // Return file URL (relative path)
-    const fileUrl = `/uploads/${filename}`;
-
-    return {
-      url: fileUrl,
-      filename: filename,
-    };
+    return await this.s3Service.uploadFile(file, folder);
   }
 }
 

@@ -304,7 +304,7 @@ export default function CreateBlog() {
 
     try {
       setUploading(true);
-      const result = await uploadService.uploadFile(file);
+      const result = await uploadService.uploadFile(file, 'blogs');
       setValue('image', result.url);
       setImagePreview(result.url);
       toast.success('Image uploaded successfully');
