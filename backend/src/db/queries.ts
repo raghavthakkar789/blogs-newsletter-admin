@@ -760,13 +760,14 @@ export async function findRecentActivityLogs(limit: number = 10): Promise<Activi
       createdAt: row.createdAt,
       user: row.user || { id: '', firstName: '', lastName: '', email: '' },
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const dbError = error as { message?: string; code?: string; detail?: string; hint?: string; stack?: string };
     console.error('Error in findRecentActivityLogs:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      hint: error.hint,
-      stack: error.stack,
+      message: dbError.message,
+      code: dbError.code,
+      detail: dbError.detail,
+      hint: dbError.hint,
+      stack: dbError.stack,
     });
     // Return empty array if query fails (e.g., table doesn't exist)
     return [];
@@ -825,13 +826,14 @@ export async function getBlogStats(): Promise<BlogStats> {
     });
 
     return stats;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const dbError = error as { message?: string; code?: string; detail?: string; hint?: string; stack?: string };
     console.error('Error in getBlogStats:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      hint: error.hint,
-      stack: error.stack,
+      message: dbError.message,
+      code: dbError.code,
+      detail: dbError.detail,
+      hint: dbError.hint,
+      stack: dbError.stack,
     });
     // Return empty stats if query fails
     return {
@@ -876,13 +878,14 @@ export async function getNewsletterStats(): Promise<NewsletterStats> {
     });
 
     return stats;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const dbError = error as { message?: string; code?: string; detail?: string; hint?: string; stack?: string };
     console.error('Error in getNewsletterStats:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      hint: error.hint,
-      stack: error.stack,
+      message: dbError.message,
+      code: dbError.code,
+      detail: dbError.detail,
+      hint: dbError.hint,
+      stack: dbError.stack,
     });
     // Return empty stats if query fails
     return {

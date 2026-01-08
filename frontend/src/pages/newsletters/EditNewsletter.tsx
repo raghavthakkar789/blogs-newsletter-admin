@@ -111,8 +111,11 @@ export default function EditNewsletter() {
       toast.success('Newsletter updated successfully');
       navigate('/admin/newsletters');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update newsletter');
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to update newsletter');
     }
   });
 
@@ -124,8 +127,11 @@ export default function EditNewsletter() {
       queryClient.invalidateQueries({ queryKey: ['newsletter', id] });
       toast.success('Status updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to update status');
     }
   });
 
@@ -206,7 +212,7 @@ export default function EditNewsletter() {
           : '';
 
       const result = await newsletterContentService.regenerateNewsletterField({
-        field: regeneratingField as any,
+        field: regeneratingField as 'title' | 'summary' | 'content' | 'category' | 'tags' | 'image',
         prompt: regeneratePrompt,
         currentValue,
         context,
@@ -231,8 +237,11 @@ export default function EditNewsletter() {
       setRegeneratingField(null);
       setRegeneratePrompt('');
       toast.success(`${getFieldLabel(regeneratingField)} regenerated successfully!`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to regenerate field');
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to regenerate field');
     } finally {
       setIsRegenerating(false);
     }
@@ -245,8 +254,11 @@ export default function EditNewsletter() {
       toast.success('Newsletter deleted successfully');
       navigate('/admin/newsletters');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete newsletter');
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to delete newsletter');
     }
   });
 
@@ -503,7 +515,7 @@ export default function EditNewsletter() {
                 <Card>
                   <CardContent className="pt-4">
                     <div className="space-y-3">
-                      {newsletter.editHistory.slice().reverse().map((edit: any, index: number) => (
+                      {newsletter.editHistory?.slice().reverse().map((edit, index: number) => (
                         <div key={index} className="border-l-2 border-l-primary pl-4 py-2">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-sm">{edit.userName}</span>

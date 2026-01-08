@@ -26,8 +26,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         return await analyticsService.getDashboard();
-      } catch (err: any) {
-        console.error('Dashboard API Error:', err);
+      } catch (err: unknown) {
         toast.error('Failed to load dashboard data. Using default values.');
         // Return default stats on error
         return {
@@ -75,10 +74,6 @@ export default function Dashboard() {
     );
   }
 
-  // Log errors for debugging
-  if (isError) {
-    console.error('Dashboard query error:', error);
-  }
 
   const getActivityIcon = (action: string) => {
     if (action.includes('BLOG')) return <FileText className="h-4 w-4" />;

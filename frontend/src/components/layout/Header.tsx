@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -5,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Bell, LogOut, Menu } from 'lucide-react';
@@ -20,20 +20,18 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await logout();
     navigate('/login');
-  };
+  }, [logout, navigate]);
 
-  const getPageTitle = () => {
+  const pageTitle = useMemo(() => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'Dashboard';
     if (path.includes('/blogs')) return 'Blogs';
     if (path.includes('/newsletters')) return 'Newsletters';
-    if (path.includes('/users')) return 'Users';
-    if (path.includes('/profile')) return 'Profile';
     return 'Admin Panel';
-  };
+  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-40 bg-card border-b border-border backdrop-blur-sm bg-opacity-95">
@@ -48,7 +46,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <h2 className="text-lg font-semibold text-foreground">
-            {getPageTitle()}
+            {pageTitle}
           </h2>
         </div>
 

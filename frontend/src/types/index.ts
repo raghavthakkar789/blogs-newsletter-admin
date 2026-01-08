@@ -96,7 +96,7 @@ export interface ActivityLog {
   action: string;
   entityType?: string | null;
   entityId?: string | null;
-  details?: any;
+  details?: Record<string, unknown>;
   ipAddress?: string | null;
   userAgent?: string | null;
   createdAt: string;

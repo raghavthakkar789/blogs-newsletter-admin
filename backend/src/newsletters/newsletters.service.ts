@@ -9,10 +9,12 @@ import {
   NewsletterFilters,
 } from '../db/queries';
 import { getAdminUserId } from '../utils/adminUser';
+import { trackChanges, buildUpdateDataWithHistory } from '../utils/editHistory';
 import { CreateNewsletterDto } from './dto/create-newsletter.dto';
 import { UpdateNewsletterDto } from './dto/update-newsletter.dto';
-import { UpdateStatusDto } from '../blogs/dto/update-status.dto';
-import { BulkUpdateStatusDto } from '../blogs/dto/bulk-update-status.dto';
+import { UpdateStatusDto } from '../common/dto/update-status.dto';
+import { BulkUpdateStatusDto } from '../common/dto/bulk-update-status.dto';
+import { ContentStatus } from '../types/database';
 
 @Injectable()
 export class NewslettersService {
@@ -59,40 +61,21 @@ export class NewslettersService {
       throw new NotFoundException('Newsletter not found');
     }
 
-    const changes: string[] = [];
-    const fieldsToCheck = ['title', 'content', 'summary', 'category', 'image', 'tags'];
-
-    fieldsToCheck.forEach(field => {
-      if (field === 'tags') {
-        const oldTags = JSON.stringify(newsletter.tags || []);
-        const newTags = JSON.stringify(updateNewsletterDto.tags || []);
-        if (oldTags !== newTags) {
-          changes.push(field);
-        }
-      } else if (updateNewsletterDto[field as keyof typeof updateNewsletterDto] !== undefined && 
-                 updateNewsletterDto[field as keyof typeof updateNewsletterDto] !== newsletter[field as keyof typeof newsletter]) {
-        changes.push(field);
-      }
+    // Track changes for edit history
+    const editEntry = trackChanges({
+      oldEntity: newsletter,
+      newData: updateNewsletterDto,
+      fieldsToCheck: ['title', 'content', 'summary', 'category', 'image', 'tags'],
+      user,
     });
 
-    const userName = `${user.firstName} ${user.lastName}`;
-    const editEntry = {
-      userId: user.id,
-      userName,
-      editedAt: new Date().toISOString(),
-      changes
-    };
-
-    const existingHistory = (newsletter.editHistory as any[]) || [];
-    const updatedHistory = [...existingHistory, editEntry];
-
-    const updateData: any = {
-      ...updateNewsletterDto,
-      image: updateNewsletterDto.image === '' ? null : updateNewsletterDto.image,
-      lastEditedBy: userName,
-      lastEditedAt: new Date(),
-      editHistory: updatedHistory
-    };
+    // Build update data with edit history
+    const updateData = buildUpdateDataWithHistory(
+      updateNewsletterDto,
+      newsletter.editHistory,
+      editEntry,
+      'image'
+    );
 
     await updateNewsletter(id, updateData);
     const updatedNewsletter = await findNewsletterById(id);
@@ -114,8 +97,12 @@ export class NewslettersService {
       throw new NotFoundException('Newsletter not found');
     }
 
-    const updateData: any = {
-      status: updateStatusDto.status,
+    const updateData: {
+      status: ContentStatus;
+      approvedById: string | null;
+      publishedAt?: Date;
+    } = {
+      status: updateStatusDto.status as ContentStatus,
       approvedById: updateStatusDto.status === 'APPROVED' ? await getAdminUserId() : newsletter.approvedById
     };
 

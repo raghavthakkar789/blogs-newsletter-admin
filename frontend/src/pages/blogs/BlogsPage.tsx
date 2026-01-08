@@ -71,10 +71,8 @@ export default function BlogsPage() {
           search: search || undefined,
           status: statusFilter !== 'all' ? statusFilter : undefined
         });
-        console.log('Blogs API Response:', result);
         return result;
       } catch (err) {
-        console.error('Error fetching blogs:', err);
         throw err;
       }
     },
@@ -84,8 +82,6 @@ export default function BlogsPage() {
   const blogs = data?.blogs || [];
   const totalPages = data?.totalPages || 0;
   const total = data?.total || 0;
-  
-  console.log('BlogsPage - blogs:', blogs, 'isLoading:', isLoading, 'error:', error);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => blogService.updateBlogStatus(id, 'APPROVED'),

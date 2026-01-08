@@ -236,18 +236,11 @@ export default function CreateNewsletter() {
 
       // Get response as text first to handle potential JSON parsing issues
       const responseText = await response.text();
-      console.log('Raw n8n Newsletter Response (text):', responseText);
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       let result;
       try {
         result = JSON.parse(responseText);
-        console.log('Parsed n8n Newsletter Response:', result);
-        console.log('Response keys:', Object.keys(result));
       } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        console.error('Response text:', responseText);
         throw new Error(`Invalid JSON response from webhook: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
       }
 
@@ -271,8 +264,6 @@ export default function CreateNewsletter() {
       }
       // Otherwise use result directly (most common case)
       
-      console.log('Extracted newsletter data:', data);
-      
       // Extract fields - handle both capitalized and lowercase field names
       const Title = data?.title || data?.Title;
       const Content = data?.contentHtml || data?.Content;
@@ -283,8 +274,6 @@ export default function CreateNewsletter() {
 
       // Validate that we received at least title or content
       if (!Title && !Content) {
-        console.error('Invalid response structure. Full result:', result);
-        console.error('Extracted data:', data);
         throw new Error(`Response missing required fields (Title/Content). Received keys: ${Object.keys(data || {}).join(', ')}`);
       }
 
@@ -322,9 +311,9 @@ export default function CreateNewsletter() {
       }
 
       toast.success('Newsletter content generated successfully!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to generate content. Please try again.');
-      console.error('Error generating newsletter content:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate content. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -423,8 +412,11 @@ export default function CreateNewsletter() {
       
       toast.success('Newsletter created successfully');
       navigate('/admin/newsletters');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create newsletter');
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to create newsletter');
     } finally {
       setLoading(false);
     }

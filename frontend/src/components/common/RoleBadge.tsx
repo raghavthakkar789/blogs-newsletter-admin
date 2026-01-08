@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Role } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,7 +20,7 @@ interface RoleBadgeProps {
   className?: string;
 }
 
-export function RoleBadge({ role, className }: RoleBadgeProps) {
+export const RoleBadge = memo(function RoleBadge({ role, className }: RoleBadgeProps) {
   const config = roleConfig[role];
   return (
     <Badge variant="outline" className={`${config.color} border ${className || ''}`}>
@@ -27,5 +28,5 @@ export function RoleBadge({ role, className }: RoleBadgeProps) {
       {config.label}
     </Badge>
   );
-}
+});
 

@@ -45,7 +45,12 @@ export interface Blog {
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
-  editHistory: any | null; // JSONB field
+  editHistory: Array<{
+    userId: string;
+    userName: string;
+    editedAt: string;
+    changes: string[];
+  }> | null;
   lastEditedAt: Date | null;
   lastEditedBy: string | null;
 }
@@ -65,7 +70,12 @@ export interface Newsletter {
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;
-  editHistory: any | null; // JSONB field
+  editHistory: Array<{
+    userId: string;
+    userName: string;
+    editedAt: string;
+    changes: string[];
+  }> | null;
   lastEditedAt: Date | null;
   lastEditedBy: string | null;
 }
@@ -77,7 +87,7 @@ export interface ActivityLog {
   action: string;
   entityType: string | null;
   entityId: string | null;
-  details: any | null; // JSONB field
+  details: Record<string, unknown> | null;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: Date;

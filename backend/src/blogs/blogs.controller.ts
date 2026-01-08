@@ -16,10 +16,11 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import { UpdateStatusDto } from './dto/update-status.dto';
-import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { UpdateStatusDto } from '../common/dto/update-status.dto';
+import { BulkUpdateStatusDto } from '../common/dto/bulk-update-status.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { CurrentUser, CurrentUser as CurrentUserType } from '../common/decorators/current-user.decorator';
+import { ContentStatus } from '../types/database';
 import { LoggingInterceptor } from '../common/interceptors/logging.interceptor';
 
 @Controller('blogs')
@@ -36,9 +37,9 @@ export class BlogsController {
     @Query('createdById') createdById?: string,
     @Query('search') search?: string,
   ) {
-    const filters: any = {};
+    const filters: { status?: ContentStatus; createdById?: string; search?: string } = {};
     if (status && status !== 'all') {
-      filters.status = status as any;
+      filters.status = status as ContentStatus;
     }
     if (createdById) {
       filters.createdById = createdById;

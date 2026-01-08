@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -9,7 +10,7 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
-export function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+export const EmptyState = memo(function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
     <Card className="p-12 transition-all duration-200 hover:shadow-lg">
       <div className="text-center">
@@ -24,5 +25,5 @@ export function EmptyState({ icon: Icon, title, description, actionLabel, onActi
       </div>
     </Card>
   );
-}
+});
 

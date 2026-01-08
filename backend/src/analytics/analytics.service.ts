@@ -22,13 +22,14 @@ export class AnalyticsService {
         newsletters,
         recentActivity,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const dbError = error as { message?: string; code?: string; detail?: string; hint?: string; stack?: string };
       console.error('Error in getDashboard:', {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint,
-        stack: error.stack,
+        message: dbError.message,
+        code: dbError.code,
+        detail: dbError.detail,
+        hint: dbError.hint,
+        stack: dbError.stack,
       });
       throw error;
     }

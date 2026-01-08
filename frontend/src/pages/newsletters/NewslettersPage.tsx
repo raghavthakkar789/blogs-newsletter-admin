@@ -30,10 +30,8 @@ export default function NewslettersPage() {
         search: search || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined
       });
-        console.log('Newsletters API Response:', result);
         return result;
       } catch (err) {
-        console.error('Error fetching newsletters:', err);
         throw err;
       }
     },
@@ -43,8 +41,6 @@ export default function NewslettersPage() {
   const newsletters = data?.newsletters || [];
   const totalPages = data?.totalPages || 0;
   const hasSelection = selectedIds.length > 0;
-  
-  console.log('NewslettersPage - newsletters:', newsletters, 'isLoading:', isLoading, 'error:', error);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => newsletterService.updateNewsletterStatus(id, 'APPROVED'),

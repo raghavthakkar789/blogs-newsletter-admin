@@ -119,7 +119,7 @@ export default function Login() {
               </Label>
             </div>
             <Link
-              to="/forgot-password"
+              to="#"
               className="text-sm text-primary hover:underline transition-colors"
             >
               Forgot password?

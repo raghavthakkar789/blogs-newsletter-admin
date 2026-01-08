@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ContentStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, XCircle, Ban } from 'lucide-react';
@@ -30,7 +31,7 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export const StatusBadge = memo(function StatusBadge({ status, className }: StatusBadgeProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
   return (
@@ -39,5 +40,5 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       {config.label}
     </Badge>
   );
-}
+});
 

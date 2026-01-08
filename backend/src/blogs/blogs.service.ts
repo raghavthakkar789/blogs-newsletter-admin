@@ -9,10 +9,12 @@ import {
   BlogFilters,
 } from '../db/queries';
 import { getAdminUserId } from '../utils/adminUser';
+import { trackChanges, buildUpdateDataWithHistory } from '../utils/editHistory';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import { UpdateStatusDto } from './dto/update-status.dto';
-import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { UpdateStatusDto } from '../common/dto/update-status.dto';
+import { BulkUpdateStatusDto } from '../common/dto/bulk-update-status.dto';
+import { ContentStatus } from '../types/database';
 
 @Injectable()
 export class BlogsService {
@@ -62,43 +64,20 @@ export class BlogsService {
     }
 
     // Track changes for edit history
-    const changes: string[] = [];
-    const fieldsToCheck = ['title', 'content', 'summary', 'category', 'author', 'image', 'tags'];
-
-    fieldsToCheck.forEach(field => {
-      if (field === 'tags') {
-        const oldTags = JSON.stringify(blog.tags || []);
-        const newTags = JSON.stringify(updateBlogDto.tags || []);
-        if (oldTags !== newTags) {
-          changes.push(field);
-        }
-      } else if (updateBlogDto[field as keyof typeof updateBlogDto] !== undefined && 
-                 updateBlogDto[field as keyof typeof updateBlogDto] !== blog[field as keyof typeof blog]) {
-        changes.push(field);
-      }
+    const editEntry = trackChanges({
+      oldEntity: blog,
+      newData: updateBlogDto,
+      fieldsToCheck: ['title', 'content', 'summary', 'category', 'author', 'image', 'tags'],
+      user,
     });
 
-    // Build edit history entry
-    const userName = `${user.firstName} ${user.lastName}`;
-    const editEntry = {
-      userId: user.id,
-      userName,
-      editedAt: new Date().toISOString(),
-      changes
-    };
-
-    // Get existing edit history
-    const existingHistory = (blog.editHistory as any[]) || [];
-    const updatedHistory = [...existingHistory, editEntry];
-
-    // Prepare update data
-    const updateData: any = {
-      ...updateBlogDto,
-      image: updateBlogDto.image === '' ? null : updateBlogDto.image,
-      lastEditedBy: userName,
-      lastEditedAt: new Date(),
-      editHistory: updatedHistory
-    };
+    // Build update data with edit history
+    const updateData = buildUpdateDataWithHistory(
+      updateBlogDto,
+      blog.editHistory,
+      editEntry,
+      'image'
+    );
 
     await updateBlog(id, updateData);
     const updatedBlog = await findBlogById(id);
@@ -120,8 +99,12 @@ export class BlogsService {
       throw new NotFoundException('Blog not found');
     }
 
-    const updateData: any = {
-      status: updateStatusDto.status,
+    const updateData: {
+      status: ContentStatus;
+      approvedById: string | null;
+      publishedAt?: Date;
+    } = {
+      status: updateStatusDto.status as ContentStatus,
       approvedById: updateStatusDto.status === 'APPROVED' ? await getAdminUserId() : blog.approvedById
     };
 

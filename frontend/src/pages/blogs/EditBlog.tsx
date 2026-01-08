@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { blogService, uploadService, aiService } from '@/services/api';
+import { Blog } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,7 +62,7 @@ export default function EditBlog() {
     queryFn: () => blogService.getBlog(id!)
   });
 
-  const blog = data?.blog;
+  const blog = data?.blog as Blog | undefined;
 
   const {
     register,
@@ -112,8 +113,11 @@ export default function EditBlog() {
       toast.success('Blog updated successfully');
       navigate('/admin/blogs');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update blog');
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to update blog');
     }
   });
 
@@ -125,8 +129,11 @@ export default function EditBlog() {
       queryClient.invalidateQueries({ queryKey: ['blog', id] });
       toast.success('Status updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to update status');
     }
   });
 
@@ -213,7 +220,7 @@ export default function EditBlog() {
       };
 
       const result = await aiService.regenerateField({
-        field: regeneratingField as any,
+        field: regeneratingField as 'title' | 'summary' | 'content' | 'category' | 'tags' | 'author' | 'image',
         prompt: regeneratePrompt,
         currentValue: fieldValueMap[regeneratingField] || '',
         context,
@@ -237,14 +244,17 @@ export default function EditBlog() {
       setRegeneratingField(null);
       setRegeneratePrompt('');
       toast.success(`${getFieldLabel(regeneratingField)} regenerated successfully!`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to regenerate field');
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error.response as { data?: { message?: string } })?.data?.message
+        : undefined;
+      toast.error(errorMessage || 'Failed to regenerate field');
     } finally {
       setIsRegenerating(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): React.ReactNode => {
     switch (status) {
       case 'PENDING': return <Clock className="h-4 w-4" />;
       case 'APPROVED': return <CheckCircle className="h-4 w-4" />;
@@ -327,9 +337,9 @@ export default function EditBlog() {
           {getStatusIcon(blog.status)}
           Blog Status: {blog.status}
         </AlertTitle>
-        {blog.status === 'REJECTED' && (blog as any).rejectionReason && (
+        {blog.status === 'REJECTED' && 'rejectionReason' in blog && typeof (blog as Blog & { rejectionReason?: string }).rejectionReason === 'string' && (
           <AlertDescription>
-            Rejection Reason: {(blog as any).rejectionReason}
+            Rejection Reason: {(blog as Blog & { rejectionReason?: string }).rejectionReason}
           </AlertDescription>
         )}
         {blog.status === 'PENDING' && (
@@ -590,7 +600,7 @@ export default function EditBlog() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {blog.editHistory.slice().reverse().map((edit: any, index: number) => (
+                  {blog.editHistory?.slice().reverse().map((edit, index: number) => (
                     <div key={index} className="border-l-2 border-l-primary pl-4 py-2">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm">{edit.userName}</span>

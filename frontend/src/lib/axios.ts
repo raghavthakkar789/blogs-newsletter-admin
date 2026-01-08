@@ -17,7 +17,6 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -28,7 +27,6 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('API Error:', error.config?.method?.toUpperCase(), error.config?.url, error.response?.status, error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

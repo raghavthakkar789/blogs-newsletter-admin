@@ -24,7 +24,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        message = (exceptionResponse as any).message || message;
+        message = ('message' in exceptionResponse && typeof exceptionResponse.message === 'string') 
+          ? exceptionResponse.message 
+          : message;
       }
     } else if (exception instanceof Error) {
       // Handle Zod validation errors
@@ -49,7 +51,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // In development, include error details
     const isDevelopment = process.env.NODE_ENV !== 'production';
     
-    const responseBody: any = {
+    interface ErrorResponse {
+      message: string;
+      statusCode: number;
+      timestamp: string;
+      path: string;
+      error?: string;
+      stack?: string;
+    }
+
+    const responseBody: ErrorResponse = {
       message,
       statusCode: status,
       timestamp: new Date().toISOString(),
