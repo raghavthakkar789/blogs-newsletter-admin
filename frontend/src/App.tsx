@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 
 // Pages
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import BlogsPage from './pages/blogs/BlogsPage';
 import CreateBlog from './pages/blogs/CreateBlog';
@@ -16,6 +17,9 @@ import ViewNewsletter from './pages/newsletters/ViewNewsletter';
 function App() {
   return (
     <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+
       {/* Root Route */}
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 

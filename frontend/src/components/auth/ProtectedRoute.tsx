@@ -1,8 +1,8 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
 export function ProtectedRoute() {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -12,7 +12,11 @@ export function ProtectedRoute() {
     );
   }
 
-  // Admin is always authenticated
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <Outlet />;
 }
 
